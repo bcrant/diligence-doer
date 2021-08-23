@@ -1,0 +1,9 @@
+# ignrore swap files and python run files
+*.pyc
+*.swp
+.idea
+.key
+.metadata/
+.idea/
+.vscode
+**/.DS_Store
