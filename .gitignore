@@ -1,3 +1,5 @@
+.env
+
 # ignrore swap files and python run files
 *.pyc
 *.swp
@@ -11,5 +13,7 @@
 *.yml
 *.yaml
 
-
-.env
+# ignore Tableau files
+*.tdsx
+*.tds
+tmp/*
