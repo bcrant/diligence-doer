@@ -1,37 +1,60 @@
 import os
+import pprint
 import zipfile
 import tableauserverclient as tsc
 from dotenv import load_dotenv
 
+#
+# AUTHENTICATION
+#
+load_dotenv()
+TOKEN_NAME = os.getenv('TABLEAU_PAT_NAME')
+TOKEN = os.getenv('TABLEAU_PAT')
+SERVER_URL = os.getenv('Tableau.SERVER_URL')
 
-def parse_tableau():
-    #
-    # Authentication
-    #
-    load_dotenv()
-    TOKEN_NAME = os.getenv('TABLEAU_PAT_NAME')
-    TOKEN = os.getenv('TABLEAU_PAT')
-    SERVER_URL = os.getenv('TABLEAU_SERVER_URL')
 
-    tableau_auth = tsc.PersonalAccessTokenAuth(
+class Tableau:
+    AUTHENTICATION = tsc.PersonalAccessTokenAuth(
         token_name=TOKEN_NAME,
         personal_access_token=TOKEN
     )
-    server = tsc.Server(SERVER_URL, use_server_version=True)
+    SERVER = tsc.Server(
+        server_address=SERVER_URL, 
+        use_server_version=True
+    )
 
+
+def parse_tableau():
     #
-    # Download all data sources on Tableau Server
+    # Get metadata about all data sources on Tableau Server
     #
-    with server.auth.sign_in_with_personal_access_token(tableau_auth):
-        all_data_sources, pagination_item = server.datasources.get()
+    datasource_dict = {}
+    with Tableau.SERVER.auth.sign_in_with_personal_access_token(Tableau.AUTHENTICATION):
+        all_data_sources, pagination_item = Tableau.SERVER.datasources.get()
         print('There are {} data sources on site: '.format(pagination_item.total_available))
 
-        all_datasource_ids = [datasource.id for datasource in all_data_sources]
-        print(all_datasource_ids)
-        # for ds_id in all_datasource_ids:
+        for datasource in all_data_sources[0:10]:
+            # Populate all metadata about the datasource's connections
+            Tableau.SERVER.datasources.populate_connections(datasource)
 
-        zipped_ds_path = server.datasources.download(
-            all_datasource_ids[5],
+            # TODO: Investigate if we need to handle case where
+            #       data source that has multiple connection IDs...
+            #       (ed724163-6daf-4aee-be3c-8b8dfe3890e9, 077e71fd-3bf0-47f2-9e3a-346b2fef9461)
+            datasource_dict[datasource.id] = {
+                'datasource_id': datasource.id,
+                'datasource_name': datasource.name,
+                'datasource_type': datasource.datasource_type,
+                'server_address': datasource.connections[0].server_address,
+                'server_port': datasource.connections[0].server_port,
+                'connection_ids': datasource.connections[0].id,
+            }
+
+    #
+    # Download each data source on Tableau Server
+    #
+    for ds_id in datasource_dict.keys():
+        zipped_ds_path = Tableau.SERVER.datasources.download(
+            datasource_dict.get(ds_id).get('datasource_name'),
             filepath='./tmp',
             include_extract=False
         )
@@ -59,28 +82,11 @@ def parse_tableau():
             print(tableau_custom_sql)
             print('\n\n')
 
+        #
+        # TODO: What happens if data source does not have custom SQL?
+        #       What happens if it has multiple custom SQL?
+        #
+
 
 if __name__ == "__main__":
     parse_tableau()
-
-# # EXPLORE DATASOURCE ATTRIBUTES
-#
-# for datasource in all_datasources:
-#     print('datasource.id: ', datasource.id)
-#     print('datasource.name: ', datasource.name)
-#     print('datasource.datasource_type: ', datasource.datasource_type)
-#
-#     server.datasources.populate_connections(datasource)
-#
-#     for connection in datasource.connections:
-#         print('connection.datasource_id: ', connection.datasource_id)
-#         print('connection.datasource_name: ',  connection.datasource_name)
-#         print('connection.id: ',  connection.id)
-#         print('connection.connection_type: ',  connection.connection_type)
-#         print('connection.username: ',  connection.username)
-#         print('connection.password: ',  connection.password)
-#         print('connection.embed_password: ',  connection.embed_password)
-#         print('connection.server_address: ',  connection.server_address)
-#         print('connection.server_port: ',  connection.server_port)
-#
-#     print('\n\n')
