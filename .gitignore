@@ -1,7 +1,8 @@
 .env
 
 # ignrore swap files and python run files
-__pycache__/*
+**/__pycache__
+**/tmp
 *.pyc
 *.swp
 .idea
