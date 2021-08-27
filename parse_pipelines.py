@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import yaml
+import pprint
 import sqlparse
 from sql_metadata import Parser
 from helpers import table_name_fmt, log
@@ -63,4 +64,4 @@ for table in sorted(commands_dict.keys()):
                 'field_name_aliases': column_aliases_dict
             }
 
-print(table_metadata_dict)
+pprint.pprint(table_metadata_dict)
