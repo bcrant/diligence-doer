@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import tableauserverclient as TSC
 from pathlib import Path
 from dotenv import load_dotenv
-from helpers import pp
+from helpers import pp, log
 
 
 def parse_tableau():
@@ -27,7 +27,7 @@ def parse_tableau():
             # Filter out text files
             text_filters = ('hyper', 'webdata-direct', 'textscan')
             if datasource.datasource_type not in text_filters:
-                print(datasource.id, '\t', datasource.datasource_type, '\t', datasource.name)
+                # print(datasource.id, '\t', datasource.datasource_type, '\t', datasource.name)
                 metadata_dict[datasource.id] = {
                     'datasource_id': datasource.id,
                     'datasource_name': datasource.name,
@@ -40,13 +40,12 @@ def parse_tableau():
 
         # Parse each data source file for its Custom SQL and store in dictionary
         for ds_id, ds_path in data_source_files.items():
-            print(ds_id, ds_path)
             with open(ds_path) as f:
                 tree = ET.parse(f)
             root = tree.getroot()
 
             # METADATA - Connection properties of data source xml
-            connections = root.iter('connection')
+            connections = [c for c in root.iter('connection')]
             metadata = get_connection_metadata(connections)
             initial_sql = get_initial_sql(connections)
             parsed_initial_sql = parse_custom_sql(
@@ -54,46 +53,36 @@ def parse_tableau():
             )
 
             # SCHEMA - Relation properties of data source xml
-            relations = root.iter('relation')
+            relations = [r for r in root.iter('relation')]
             custom_sql = get_custom_sql(relations)
             parsed_custom_sql = parse_custom_sql(
                 format_custom_sql(custom_sql)
             )
 
-            tables = get_tables_from_xml(relations)
-            columns = get_columns_from_xml(root.iter('column'))
-
             # Update each output dictionaries with their respective parsed information
             metadata_dict[ds_id] = {
-                **metadata
-            }
-            parsed_data_source_dict[ds_id] = {
-                'schema': {
-                    'tables': tables,
-                    'columns': columns
-                },
-                'queries': {
-                    'custom_sql': custom_sql,
-                    'initial_sql': initial_sql,
-                    'parsed_custom_sql': parsed_custom_sql,
-                    'parsed_initial_sql': parsed_initial_sql
-                }
+                **metadata,
+                'raw_custom_sql': custom_sql,
+                'raw_initial_sql': initial_sql,
+                'parsed_custom_sql': parsed_custom_sql,
+                'parsed_initial_sql': parsed_initial_sql
             }
 
-            test = {
-                'id': ds_id,
-                'XML_tables': tables,
-                'SQL_tables': parsed_custom_sql.get('source_tables')
+            parsed_data_source_dict[ds_id] = {
+                'source_tables': parsed_custom_sql.get('source_tables'),
+                'source_table_aliases': parsed_custom_sql.get('source_table_aliases'),
+                'field_names': parsed_custom_sql.get('field_names'),
+                'field_name_aliases': parsed_custom_sql.get('field_names_aliases')
             }
-            pp(test)
 
     # print('METADATA DICT...')
     # pp(metadata_dict)
 
-    # print('CUSTOM SQL DICT...')
-    # pp(parsed_data_source_dict)
+    print('PARSED DATA SOURCE DICT...')
+    pp(parsed_data_source_dict)
 
-    # TODO: Delete /tmp/ files after parsing?
+    # Remove all data source xml files from temporary directory
+    delete_tmp_files_of_type('.xml')
 
 
 def authenticate_tableau():
@@ -131,27 +120,24 @@ def download_data_sources(tableau_server, data_source_ids_list):
         )
 
         # Packaged Datasource (.tdsx) files are zipped archives. Here we extract the Datasource (.tds) only.
-        unzipped_ds_path = None
         with zipfile.ZipFile(zipped_ds_path) as packaged_data_source:
             for ds_file in packaged_data_source.namelist():
                 if '.tds' in ds_file:
                     unzipped_ds_path = packaged_data_source.extract(ds_file, './tmp')
                     print(f'Extracting .tds file from...\t {ds_file}')
+
+                    # Convert .tds to .xml
+                    tds_file = Path(os.getcwd() + '/' + unzipped_ds_path)
+                    tds_as_xml = tds_file.rename(tds_file.with_suffix('.xml'))
+
+                    # Add path to dict
+                    file_path_dict[ds_id] = tds_as_xml
+
                 else:
                     print(f'No .tds file found in...\t\t {ds_file}')
 
-        # Convert .tds to .xml
-        tds_file = Path(os.getcwd() + '/' + unzipped_ds_path)
-        tds_as_xml = tds_file.rename(tds_file.with_suffix('.xml'))
-
-        # Add path to dict
-        file_path_dict[ds_id] = tds_as_xml
-
-        # Remove .tdsx from temporary directory
-        tmp_dir = os.getcwd() + '/tmp'
-        for f in os.listdir(Path(tmp_dir)):
-            if '.tdsx' in f:
-                os.remove(Path(tmp_dir + '/' + f))
+    # Remove all .tdsx from temporary directory
+    delete_tmp_files_of_type('.tdsx')
 
     return file_path_dict
 
@@ -212,10 +198,26 @@ def format_custom_sql(raw_sql_list):
             keyword_case='upper',
             comma_first=True
         )
+
         # Split SQL by statement (a phrase ending in a semicolon)
         split_statement = sqlparse.split(fmt_sql)
 
+        for i in split_statement:
+
+            parse_split_statement = sqlparse.parse(i)[0].get_type()
+            print('parse split statement...', parse_split_statement)
+
         formatted_sql.append(split_statement)
+
+        #
+        # print('token_first...', sqlparse.parse(raw_sql)[0].token_first())
+        # if str(sqlparse.parse(fmt_sql)[0].token_first()) == 'SELECT':
+        #
+        #
+        #     # Split SQL by statement (a phrase ending in a semicolon)
+        #     split_statement = sqlparse.split(fmt_sql)
+        #
+        #     formatted_sql.append(split_statement)
 
     return formatted_sql
 
@@ -262,35 +264,11 @@ def parse_custom_sql(clean_sql_list):
     return table_metadata_dict
 
 
-def get_tables_from_xml(tables_xml):
-
-    # Get table names
-    tables_dict = {}
-    for relation in tables_xml:
-        if str(relation.attrib.get('type')) == 'table':
-            tables_dict[relation.attrib.get('name')] = relation.attrib.get('table')
-
-    return tables_dict
-
-
-def get_columns_from_xml(columns_xml):
-    # Get Column names, aliases, and calculations
-    columns_dict = {}
-    for col in columns_xml:
-        name = col.attrib.get('name').strip('[|]')
-        alias = col.attrib.get('caption')
-        datatype = col.attrib.get('datatype')
-        formula = None
-        for calc in col.iter('calculation'):
-            formula = calc.attrib.get('formula')
-
-        columns_dict[name] = {
-            'alias': alias,
-            'datatype': datatype,
-            'calculation': formula
-        }
-
-    return columns_dict
+def delete_tmp_files_of_type(filetype_str):
+    tmp_dir = os.getcwd() + '/tmp'
+    for f in os.listdir(Path(tmp_dir)):
+        if filetype_str in f:
+            os.remove(Path(tmp_dir + '/' + f))
 
 
 if __name__ == "__main__":
