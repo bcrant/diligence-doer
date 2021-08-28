@@ -8,3 +8,25 @@ node_modules
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# ignrore swap files and python run files
+**/__pycache__
+**/tmp
+*.pyc
+*.swp
+.idea
+.key
+.metadata/
+.idea/
+.vscode
+.python-version
+**/.DS_Store
+
+# ignore Tableau files
+*.tdsx
+*.tds
+tmp/*
+
+# ignore YAML files
+./backend/lambda/tableau/pipeline_files/**
+*.yaml
