@@ -71,6 +71,7 @@ def parse_tableau():
     pprint.pprint(parsed_data_source_dict)
 
     # TODO: Parse the Custom SQL and Initial SQL to uncover all database table dependencies
+
     # TODO: Delete /tmp/ files after parsing?
 
 

@@ -12,10 +12,13 @@
 .vscode
 .python-version
 **/.DS_Store
-*.yml
-*.yaml
 
 # ignore Tableau files
 *.tdsx
 *.tds
 tmp/*
+
+# ignore YAML files
+*.yml
+*.yaml
+**/pipeline_files
