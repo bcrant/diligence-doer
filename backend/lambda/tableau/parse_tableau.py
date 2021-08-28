@@ -1,10 +1,12 @@
 import os
-import pprint
 import zipfile
-from pathlib import Path
+import sqlparse
+from sql_metadata import Parser
 import xml.etree.ElementTree as ET
 import tableauserverclient as TSC
+from pathlib import Path
 from dotenv import load_dotenv
+from helpers import pp
 
 
 def parse_tableau():
@@ -21,19 +23,24 @@ def parse_tableau():
         print('There are {} data sources on site...'.format(pagination_item.total_available))
 
         # Get initial metadata about all data sources on Tableau Server
-        for datasource in all_data_sources[10:11]:
-            metadata_dict[datasource.id] = {
-                'datasource_id': datasource.id,
-                'datasource_name': datasource.name,
-                'datasource_type': datasource.datasource_type,
-                'connections': []
-            }
+        for datasource in all_data_sources[10:20]:
+            # Filter out text files
+            text_filters = ('hyper', 'webdata-direct', 'textscan')
+            if datasource.datasource_type not in text_filters:
+                print(datasource.id, '\t', datasource.datasource_type, '\t', datasource.name)
+                metadata_dict[datasource.id] = {
+                    'datasource_id': datasource.id,
+                    'datasource_name': datasource.name,
+                    'datasource_type': datasource.datasource_type,
+                    'connections': []
+                }
 
         # Download each data source on Tableau Server and return a dict of paths to those files
         data_source_files = download_data_sources(SERVER, metadata_dict.keys())
 
         # Parse each data source file for its Custom SQL and store in dictionary
         for ds_id, ds_path in data_source_files.items():
+            print(ds_id, ds_path)
             with open(ds_path) as f:
                 tree = ET.parse(f)
             root = tree.getroot()
@@ -42,12 +49,19 @@ def parse_tableau():
             connections = root.iter('connection')
             metadata = get_connection_metadata(connections)
             initial_sql = get_initial_sql(connections)
+            parsed_initial_sql = parse_custom_sql(
+                format_custom_sql(initial_sql)
+            )
 
             # SCHEMA - Relation properties of data source xml
             relations = root.iter('relation')
             custom_sql = get_custom_sql(relations)
-            tables = get_tables(relations)
-            columns = get_columns(root.iter('column'))
+            parsed_custom_sql = parse_custom_sql(
+                format_custom_sql(custom_sql)
+            )
+
+            tables = get_tables_from_xml(relations)
+            columns = get_columns_from_xml(root.iter('column'))
 
             # Update each output dictionaries with their respective parsed information
             metadata_dict[ds_id] = {
@@ -60,17 +74,24 @@ def parse_tableau():
                 },
                 'queries': {
                     'custom_sql': custom_sql,
-                    'initial_sql': initial_sql
+                    'initial_sql': initial_sql,
+                    'parsed_custom_sql': parsed_custom_sql,
+                    'parsed_initial_sql': parsed_initial_sql
                 }
             }
 
-    print('METADATA DICT...')
-    pprint.pprint(metadata_dict)
+            test = {
+                'id': ds_id,
+                'XML_tables': tables,
+                'SQL_tables': parsed_custom_sql.get('source_tables')
+            }
+            pp(test)
 
-    print('CUSTOM SQL DICT...')
-    pprint.pprint(parsed_data_source_dict)
+    # print('METADATA DICT...')
+    # pp(metadata_dict)
 
-    # TODO: Parse the Custom SQL and Initial SQL to uncover all database table dependencies
+    # print('CUSTOM SQL DICT...')
+    # pp(parsed_data_source_dict)
 
     # TODO: Delete /tmp/ files after parsing?
 
@@ -115,9 +136,9 @@ def download_data_sources(tableau_server, data_source_ids_list):
             for ds_file in packaged_data_source.namelist():
                 if '.tds' in ds_file:
                     unzipped_ds_path = packaged_data_source.extract(ds_file, './tmp')
-                    print(f'Extracting Tableau Data Source from .tdsx... {ds_file}')
+                    print(f'Extracting .tds file from...\t {ds_file}')
                 else:
-                    print(f'No Tableau Data Source file found in .tdsx... {ds_file}')
+                    print(f'No .tds file found in...\t\t {ds_file}')
 
         # Convert .tds to .xml
         tds_file = Path(os.getcwd() + '/' + unzipped_ds_path)
@@ -180,22 +201,83 @@ def get_custom_sql(custom_sql_xml):
     return custom_sql_list
 
 
-def get_tables(tables_xml):
+def format_custom_sql(raw_sql_list):
+    # Format SQL
+    formatted_sql = []
+    for raw_sql in raw_sql_list:
+        fmt_sql = sqlparse.format(
+            raw_sql,
+            reindent=True,
+            strip_comments=True,
+            keyword_case='upper',
+            comma_first=True
+        )
+        # Split SQL by statement (a phrase ending in a semicolon)
+        split_statement = sqlparse.split(fmt_sql)
+
+        formatted_sql.append(split_statement)
+
+    return formatted_sql
+
+
+def parse_custom_sql(clean_sql_list):
+    table_metadata_dict = {}
+    for q_list in clean_sql_list:
+        for q in q_list:
+            try:
+                #
+                # Table Names
+                #
+                table_names = [t for t in Parser(q).tables]
+                # log('table_names', table_names)
+
+                table_aliases_dict = Parser(q).tables_aliases
+                # log('table_aliases_dict', table_aliases_dict)
+
+                #
+                # Column Names
+                #
+                columns = [c for c in Parser(q).columns]
+                # log('columns', columns)
+
+                column_aliases_dict = Parser(q).columns_aliases
+                # log('column_aliases_dict', column_aliases_dict)
+
+            except ValueError:
+                continue
+
+            except KeyError:
+                continue
+
+            #
+            # Store Output
+            #
+            table_metadata_dict = {
+                'source_tables': table_names,
+                'source_table_aliases': table_aliases_dict,
+                'field_names': columns,
+                'field_name_aliases': column_aliases_dict
+            }
+
+    return table_metadata_dict
+
+
+def get_tables_from_xml(tables_xml):
+
     # Get table names
-    tables_list = []
-    for table_item in tables_xml:
-        if table_item.text is not None:
-            if str.lstrip(table_item.text, '\n|" "') != '':
-                tables_list.append(table_item.text)
+    tables_dict = {}
+    for relation in tables_xml:
+        if str(relation.attrib.get('type')) == 'table':
+            tables_dict[relation.attrib.get('name')] = relation.attrib.get('table')
 
-    return tables_list
+    return tables_dict
 
 
-def get_columns(columns_xml):
+def get_columns_from_xml(columns_xml):
     # Get Column names, aliases, and calculations
     columns_dict = {}
     for col in columns_xml:
-        name = col.attrib.get('name')
+        name = col.attrib.get('name').strip('[|]')
         alias = col.attrib.get('caption')
         datatype = col.attrib.get('datatype')
         formula = None
