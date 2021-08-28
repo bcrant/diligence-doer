@@ -20,7 +20,8 @@ cdk.out
 .idea/
 .vscode
 .python-version
-./.DS_Store
+.DS_Store
+
 
 # ignore Tableau files
 *.tdsx
