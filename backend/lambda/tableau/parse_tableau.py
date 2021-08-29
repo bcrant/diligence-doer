@@ -1,9 +1,11 @@
 import os
 import zipfile
 import sqlparse
-from sql_metadata import Parser
 import xml.etree.ElementTree as ET
 import tableauserverclient as TSC
+from sql_metadata import Parser
+from sqlparse.sql import IdentifierList, Identifier
+from sqlparse.tokens import Keyword, DML
 from pathlib import Path
 from dotenv import load_dotenv
 from helpers import pp, log
@@ -23,7 +25,7 @@ def parse_tableau():
         print('There are {} data sources on site...'.format(pagination_item.total_available))
 
         # Get initial metadata about all data sources on Tableau Server
-        for datasource in all_data_sources[10:20]:
+        for datasource in all_data_sources[10:51]:
             # Filter out text files
             text_filters = ('hyper', 'webdata-direct', 'textscan')
             if datasource.datasource_type not in text_filters:
@@ -48,9 +50,9 @@ def parse_tableau():
             connections = [c for c in root.iter('connection')]
             metadata = get_connection_metadata(connections)
             initial_sql = get_initial_sql(connections)
-            parsed_initial_sql = parse_custom_sql(
-                format_custom_sql(initial_sql)
-            )
+            # parsed_initial_sql = parse_custom_sql(
+            #     format_custom_sql(initial_sql)
+            # )
 
             # SCHEMA - Relation properties of data source xml
             relations = [r for r in root.iter('relation')]
@@ -65,7 +67,7 @@ def parse_tableau():
                 'raw_custom_sql': custom_sql,
                 'raw_initial_sql': initial_sql,
                 'parsed_custom_sql': parsed_custom_sql,
-                'parsed_initial_sql': parsed_initial_sql
+                # 'parsed_initial_sql': parsed_initial_sql
             }
 
             parsed_data_source_dict[ds_id] = {
@@ -112,6 +114,7 @@ def download_data_sources(tableau_server, data_source_ids_list):
     file_path_dict = {}
 
     # Download each data source on Tableau Server and parse for its Custom SQL and additional Metadata
+    print('Extracting .tds files from each .tdsx')
     for ds_id in data_source_ids_list:
         zipped_ds_path = tableau_server.datasources.download(
             ds_id,
@@ -124,7 +127,7 @@ def download_data_sources(tableau_server, data_source_ids_list):
             for ds_file in packaged_data_source.namelist():
                 if '.tds' in ds_file:
                     unzipped_ds_path = packaged_data_source.extract(ds_file, './tmp')
-                    print(f'Extracting .tds file from...\t {ds_file}')
+                    # print(f'Extracting .tds file from...\t {ds_file}')
 
                     # Convert .tds to .xml
                     tds_file = Path(os.getcwd() + '/' + unzipped_ds_path)
@@ -199,25 +202,16 @@ def format_custom_sql(raw_sql_list):
             comma_first=True
         )
 
-        # Split SQL by statement (a phrase ending in a semicolon)
-        split_statement = sqlparse.split(fmt_sql)
-
-        for i in split_statement:
-
-            parse_split_statement = sqlparse.parse(i)[0].get_type()
-            print('parse split statement...', parse_split_statement)
-
+        # Split SQL by statement
+        split_statement = list(sqlparse.split(fmt_sql))
         formatted_sql.append(split_statement)
 
-        #
-        # print('token_first...', sqlparse.parse(raw_sql)[0].token_first())
-        # if str(sqlparse.parse(fmt_sql)[0].token_first()) == 'SELECT':
-        #
-        #
-        #     # Split SQL by statement (a phrase ending in a semicolon)
-        #     split_statement = sqlparse.split(fmt_sql)
-        #
-        #     formatted_sql.append(split_statement)
+        # # TODOs:  Add logic to find next SELECT statement if CREATE, DROP, UPDATE (which break parser)
+        # #         Only breaks on Initial SQL types of CREATE statements. Perhaps edit only those
+        # for stmt in split_statement:
+        #     f_token = sqlparse.parse(stmt)[0].token_first()
+        #     print(type(f_token), f_token.ttype, f_token.value)
+        #     print(f_token.match(Keyword.DML, 'SELECT'))
 
     return formatted_sql
 
@@ -262,6 +256,15 @@ def parse_custom_sql(clean_sql_list):
             }
 
     return table_metadata_dict
+
+
+def is_sub_select(parsed):
+    if not parsed.is_group:
+        return False
+    for item in parsed.tokens:
+        if item.ttype is DML and item.value.upper() == 'SELECT':
+            return True
+    return False
 
 
 def delete_tmp_files_of_type(filetype_str):
