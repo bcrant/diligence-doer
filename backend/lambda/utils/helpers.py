@@ -10,5 +10,9 @@ def table_name_fmt(name):
     return name.replace('-', '_')
 
 
+def strip_brackets(field_name):
+    return field_name.replace('[', '').replace(']', '')
+
+
 def log(var_name, var):
-    return print('{}{}{}'.format(str(var_name), ': ', var))
+    return print('{}{}\t{}'.format(str(var_name), ': ', var))
