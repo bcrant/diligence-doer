@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import json
 import yaml
 import sqlparse
 from sql_metadata import Parser
-from helpers import table_name_fmt, log, pp
+from utils.helpers import table_name_fmt, pp
 
 
 def parse_pipelines():

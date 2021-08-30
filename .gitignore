@@ -29,5 +29,5 @@ cdk.out
 tmp/*
 
 # ignore YAML files
-./backend/lambda/tableau/pipeline_files/**
+./backend/lambda/tableau/pipeline_files
 *.yaml
