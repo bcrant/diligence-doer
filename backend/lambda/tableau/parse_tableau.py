@@ -3,6 +3,8 @@ import itertools
 import zipfile
 from pathlib import Path
 import sqlparse
+from sqlparse.sql import IdentifierList, Identifier
+from sqlparse.tokens import Keyword, DML
 from sql_metadata import Parser
 import xml.etree.ElementTree as ET
 from utils.authentication import authenticate_tableau
@@ -47,21 +49,16 @@ def parse_tableau():
 
             # Get human readable name of datasource
             ds_name = metadata_dict[ds_id].get('datasource_name')
-            print()
-            log('Datasource', ds_name)
 
             # METADATA - Connection properties of data source xml
             connections = [c for c in root.iter('connection')]
             metadata = get_connection_metadata(connections)
             initial_sql = get_initial_sql(connections)
-            # parsed_initial_sql = parse_custom_sql(
-            #     format_custom_sql(initial_sql)
-            # )
+            parsed_initial_sql = parse_initial_sql(initial_sql)
 
             # SCHEMA - Relation properties of data source xml
             #
-            # Note:
-            # It is important to collect the tables and columns from the
+            # NOTE: It is important to collect the tables and columns from the
             # XML elements as well as the inner SQL text of Tableau data sources.
             #
             # Not all tables are defined in Custom or Initial SQL.
@@ -84,12 +81,13 @@ def parse_tableau():
             #       for unpack unique
 
             # Update each output dictionaries with their respective parsed information
-            metadata_dict[ds_id] = {
+            metadata_dict[ds_name] = {
+                'datasource_id': ds_id,
                 **metadata,
                 'raw_custom_sql': custom_sql,
                 'raw_initial_sql': initial_sql,
                 'parsed_custom_sql': parsed_custom_sql,
-                # 'parsed_initial_sql': parsed_initial_sql
+                'parsed_initial_sql': parsed_initial_sql
             }
 
             parsed_data_source_dict[ds_name] = {
@@ -101,6 +99,9 @@ def parse_tableau():
                 'field_names': parsed_custom_sql.get('field_names'),
                 'field_name_aliases': parsed_custom_sql.get('field_names_aliases')
             }
+
+            # print('xml_tables', type(tables), tables)
+            # print('sql_tables', type(parsed_custom_sql.get('source_tables')), parsed_custom_sql.get('source_tables'))
 
     # print('METADATA DICT...')
     # pp(metadata_dict)
@@ -160,7 +161,6 @@ def get_connection_metadata(connection_xml):
         if connection_type in ['snowflake', 'redshift']:
             connection_metadata['server_address'] = conn.attrib.get('server')
             connection_metadata['server_port'] = conn.attrib.get('port')
-            connection_metadata['connection_ids'] = conn.attrib.get('id')
             connection_metadata['connection_dbname'] = conn.attrib.get('dbname')
             connection_metadata['connection_schema'] = conn.attrib.get('schema')
             connection_metadata['connection_warehouse'] = conn.attrib.get('warehouse')
@@ -182,7 +182,7 @@ def get_tables_from_xml(tables_xml):
             )
             tables_list.append(cleaned_table_name)
 
-    log('tables_list', tables_list)
+    # log('tables_list', tables_list)
     return tables_list
 
 
@@ -225,8 +225,7 @@ def get_columns_from_xml(root_xml):
     # Remove auto generated "Number of Records" field from dictionary
     columns_dict.pop('Number of Records')
 
-    log('columns_dict', columns_dict)
-    # pp(columns_dict)
+    # log('columns_dict', columns_dict)
     return columns_dict
 
 
@@ -290,6 +289,7 @@ def parse_custom_sql(custom_sql_list):
             # log('column_aliases_dict', column_aliases_dict)
 
         except ValueError:
+            print('Attempting to handle value error...')
             continue
 
         except KeyError:
@@ -308,23 +308,49 @@ def parse_custom_sql(custom_sql_list):
     return table_metadata_dict
 
 
-def parse_initial_sql(clean_initial_sql_list):
-    # # TODOs:  Add logic to find next SELECT statement if CREATE, DROP, UPDATE (which break parser)
-    # #         Only breaks on Initial SQL types of CREATE statements. Perhaps edit only those
-    # for stmt in split_statement:
-    #     f_token = sqlparse.parse(stmt)[0].token_first()
-    #     print(type(f_token), f_token.ttype, f_token.value)
-    #     print(f_token.match(Keyword.DML, 'SELECT'))
+def handle_unsupported_query_types(unsupported_sql):
+    parsed = sqlparse.parse(unsupported_sql)
+    grouped = sqlparse.parse().tokens.group
+    # # log('parsed', parsed)
+    # for line in unsupported_sql.splitlines():
+    #     print('...', line)
 
+    # return parsed
+
+    # if 'SELECT' in unsupported_sql:
+
+    # if 'SELECT' in unsupported_sql:
+    #     sep = 'SELECT'
+    #     log('unsupported_sql', unsupported_sql)
+    #     splitted = unsupported_sql.split(sep, maxsplit=1)[1]
+    #     stmt = f'{sep}{splitted}'
+    #     split_stmt = sqlparse.split(stmt)[0]
+    #     log('split_stmt', split_stmt)
+    #
+    #     return split_stmt
+    #
+    # else:
+    #     print('No remote database referenced in Initial SQL.')
+
+
+def parse_initial_sql(initial_sql_list):
+    # Parse SQL
     table_metadata_dict = {}
-    for q_list in clean_initial_sql_list:
-        for q in q_list:
+    for get_q in initial_sql_list:
+        f_token = sqlparse.parse(get_q)[0].token_first()
+        if not f_token.match(Keyword.DML, 'SELECT'):
+            q = handle_unsupported_query_types(get_q)
+        else:
+            q = get_q
+
+        if q:
             try:
                 #
                 # Table Names
                 #
+                log('q', q)
                 table_names = [t for t in Parser(q).tables]
-                # log('table_names', table_names)
+                log('table_names', table_names)
 
                 table_aliases_dict = Parser(q).tables_aliases
                 # log('table_aliases_dict', table_aliases_dict)

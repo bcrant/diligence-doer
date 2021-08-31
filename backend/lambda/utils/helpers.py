@@ -15,4 +15,4 @@ def strip_brackets(field_name):
 
 
 def log(var_name, var):
-    return print('{}{}\t{}'.format(str(var_name), ': ', var))
+    return print('{}\t{}{}\t{}'.format(type(var), str(var_name), ': ', var))
