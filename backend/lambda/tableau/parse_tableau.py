@@ -43,9 +43,7 @@ def parse_tableau():
 
         # Parse each data source file for its Custom SQL and store in dictionary
         for ds_id, ds_path in data_source_files.items():
-            print('''
-            ------------------
-            ''')
+            print('datasource id and datasource path...', ds_id, ds_path)
             with open(ds_path) as f:
                 tree = ET.parse(f)
             root = tree.getroot()
@@ -323,11 +321,10 @@ def parse_initial_sql(initial_sql_list):
             # Get the SELECT subquery of a statement that includes parser-breaking DML
             if not f_token.match(Keyword.DML, 'SELECT'):
                 q = handle_unsupported_query_types(get_q)
+                # Clean parenthesis
+                q = validate_parenthesis(q)
             else:
                 q = get_q
-
-            # Clean parenthesis
-            q = validate_parenthesis(q)
 
             try:
                 #
