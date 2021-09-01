@@ -49,11 +49,13 @@ def parse_tableau():
             root = tree.getroot()
 
             # Get human readable name of datasource
-            ds_name = metadata_dict[ds_id].get('datasource_name')
+            ds_name = metadata_dict.get(ds_id).get('datasource_name')
 
             # METADATA - Connection properties of data source xml
             connections = [c for c in root.iter('connection')]
             metadata = get_connection_metadata(connections)
+
+            # INITIAL SQL
             initial_sql = get_initial_sql(connections)
             parsed_initial_sql = parse_initial_sql(initial_sql)
 
@@ -290,7 +292,6 @@ def parse_custom_sql(custom_sql_list):
             # log('column_aliases_dict', column_aliases_dict)
 
         except ValueError:
-            print('Attempting to handle value error...')
             continue
 
         except KeyError:
@@ -313,16 +314,12 @@ def parse_initial_sql(initial_sql_list):
     # Parse SQL
     table_metadata_dict = {}
     for get_q in initial_sql_list:
-        print('type(get_q)', type(get_q), get_q)
-
         # If there is no SELECT statement, we can assume this is a TEMP TABLE and disregard
         if 'SELECT' in get_q:
             f_token = sqlparse.parse(get_q)[0].token_first()
             # Get the SELECT subquery of a statement that includes parser-breaking DML
             if not f_token.match(Keyword.DML, 'SELECT'):
                 q = handle_unsupported_query_types(get_q)
-                # Clean parenthesis
-                q = validate_parenthesis(q)
             else:
                 q = get_q
 
@@ -330,8 +327,9 @@ def parse_initial_sql(initial_sql_list):
                 #
                 # Table Names
                 #
+                log('pre table_names', q)
                 table_names = [t for t in Parser(q).tables]
-                log('table_names', table_names)
+                log('post table_names', table_names)
 
                 table_aliases_dict = Parser(q).tables_aliases
                 log('table_aliases_dict', table_aliases_dict)
@@ -365,16 +363,39 @@ def parse_initial_sql(initial_sql_list):
 
 
 def handle_unsupported_query_types(unsupported_sql):
-    if 'SELECT' in unsupported_sql:
-        sep = 'SELECT'
-        select_split = unsupported_sql.split(sep, maxsplit=1)[1]
-        stmt = f'{sep}{select_split}'
-        # split_stmt = sqlparse.split(stmt)[0].replace(');', ';')
-        split_stmt = stmt.replace(');', ';')
-        validate_parenthesis(split_stmt)
+    # Drop lines containing unsupported commands
+    unsupported_commands = ['CREATE', 'DROP', 'TEMP']
+    cleaned_query_split_lines = []
+    for line in unsupported_sql.splitlines():
+        if not any(cmd in line for cmd in unsupported_commands):
+            cleaned_query_split_lines.append(line)
+        else:
+            if 'SELECT' in line:
+                cleaned_query_split_lines(str('SELECT{}'.format(line.split("SELECT", maxsplit=1)[1])))
+    cleaned_query_string = '\n'.join(cleaned_query_split_lines)
 
-        return split_stmt
+    # Format Custom SQL
+    formatted_queries = sqlparse.format(
+        cleaned_query_string,
+        reindent=True,
+        strip_comments=True,
+        keyword_case='upper',
+        comma_first=True
+    )
 
+    # Parse out leftover parenthesis
+    if 'SELECT' in formatted_queries:
+        if not formatted_queries.count('SELECT') > 1:
+            sep = '(SELECT'
+            select_split = formatted_queries.split(sep, maxsplit=1)[1]
+            stmt = f'SELECT{select_split}'
+            split_stmt = stmt.replace(');', ';')
+            validated_query = validate_parenthesis(split_stmt)
+            # log('validated_query', validated_query)
+            return validated_query
+        else:
+            print('Initial SQL has multiple SELECT Statements. Requires separate parsing...')
+            return ''
     else:
         print('No remote database referenced in Initial SQL.')
 
@@ -386,12 +407,11 @@ def validate_parenthesis(query_string):
         print('UNEQUAL amount of parenthesis in query...')
         equal_parenthesis = None
         if query_string.count(lp) < query_string.count(rp):
-            equal_parenthesis = query_string.rsplit(rp)[0]
+            equal_parenthesis = query_string.rsplit(rp, maxsplit=1)[0]
         if query_string.count(lp) > query_string.count(rp):
-            equal_parenthesis = query_string.split(lp)[1]
+            equal_parenthesis = query_string.split(lp, maxsplit=1)[1]
         return validate_parenthesis(equal_parenthesis)
     else:
-        print('Parenthesis count validates query')
         return query_string
 
 
