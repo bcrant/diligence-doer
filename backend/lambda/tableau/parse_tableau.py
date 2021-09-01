@@ -26,7 +26,7 @@ def parse_tableau():
         print('There are {} data sources on site...'.format(pagination_item.total_available))
 
         # Get initial metadata about all data sources on Tableau Server
-        for datasource in all_data_sources[30:60]:
+        for datasource in all_data_sources[0:60]:
             # Filter out text files
             text_filters = ('hyper', 'webdata-direct', 'textscan')
             if datasource.datasource_type not in text_filters:
@@ -43,6 +43,9 @@ def parse_tableau():
 
         # Parse each data source file for its Custom SQL and store in dictionary
         for ds_id, ds_path in data_source_files.items():
+            print('''
+            ------------------
+            ''')
             with open(ds_path) as f:
                 tree = ET.parse(f)
             root = tree.getroot()
@@ -308,61 +311,42 @@ def parse_custom_sql(custom_sql_list):
     return table_metadata_dict
 
 
-def handle_unsupported_query_types(unsupported_sql):
-    parsed = sqlparse.parse(unsupported_sql)
-    grouped = sqlparse.parse().tokens.group
-    # # log('parsed', parsed)
-    # for line in unsupported_sql.splitlines():
-    #     print('...', line)
-
-    # return parsed
-
-    # if 'SELECT' in unsupported_sql:
-
-    # if 'SELECT' in unsupported_sql:
-    #     sep = 'SELECT'
-    #     log('unsupported_sql', unsupported_sql)
-    #     splitted = unsupported_sql.split(sep, maxsplit=1)[1]
-    #     stmt = f'{sep}{splitted}'
-    #     split_stmt = sqlparse.split(stmt)[0]
-    #     log('split_stmt', split_stmt)
-    #
-    #     return split_stmt
-    #
-    # else:
-    #     print('No remote database referenced in Initial SQL.')
-
-
 def parse_initial_sql(initial_sql_list):
     # Parse SQL
     table_metadata_dict = {}
     for get_q in initial_sql_list:
-        f_token = sqlparse.parse(get_q)[0].token_first()
-        if not f_token.match(Keyword.DML, 'SELECT'):
-            q = handle_unsupported_query_types(get_q)
-        else:
-            q = get_q
+        print('type(get_q)', type(get_q), get_q)
 
-        if q:
+        # If there is no SELECT statement, we can assume this is a TEMP TABLE and disregard
+        if 'SELECT' in get_q:
+            f_token = sqlparse.parse(get_q)[0].token_first()
+            # Get the SELECT subquery of a statement that includes parser-breaking DML
+            if not f_token.match(Keyword.DML, 'SELECT'):
+                q = handle_unsupported_query_types(get_q)
+            else:
+                q = get_q
+
+            # Clean parenthesis
+            q = validate_parenthesis(q)
+
             try:
                 #
                 # Table Names
                 #
-                log('q', q)
                 table_names = [t for t in Parser(q).tables]
                 log('table_names', table_names)
 
                 table_aliases_dict = Parser(q).tables_aliases
-                # log('table_aliases_dict', table_aliases_dict)
+                log('table_aliases_dict', table_aliases_dict)
 
                 #
                 # Column Names
                 #
                 columns = [c for c in Parser(q).columns]
-                # log('columns', columns)
+                log('columns', columns)
 
                 column_aliases_dict = Parser(q).columns_aliases
-                # log('column_aliases_dict', column_aliases_dict)
+                log('column_aliases_dict', column_aliases_dict)
 
             except ValueError:
                 continue
@@ -381,6 +365,37 @@ def parse_initial_sql(initial_sql_list):
             }
 
     return table_metadata_dict
+
+
+def handle_unsupported_query_types(unsupported_sql):
+    if 'SELECT' in unsupported_sql:
+        sep = 'SELECT'
+        select_split = unsupported_sql.split(sep, maxsplit=1)[1]
+        stmt = f'{sep}{select_split}'
+        # split_stmt = sqlparse.split(stmt)[0].replace(');', ';')
+        split_stmt = stmt.replace(');', ';')
+        validate_parenthesis(split_stmt)
+
+        return split_stmt
+
+    else:
+        print('No remote database referenced in Initial SQL.')
+
+
+def validate_parenthesis(query_string):
+    lp = '('
+    rp = ')'
+    if not query_string.count(lp) == query_string.count(rp):
+        print('UNEQUAL amount of parenthesis in query...')
+        equal_parenthesis = None
+        if query_string.count(lp) < query_string.count(rp):
+            equal_parenthesis = query_string.rsplit(rp)[0]
+        if query_string.count(lp) > query_string.count(rp):
+            equal_parenthesis = query_string.split(lp)[1]
+        return validate_parenthesis(equal_parenthesis)
+    else:
+        print('Parenthesis count validates query')
+        return query_string
 
 
 def delete_tmp_files_of_type(filetype_str):
