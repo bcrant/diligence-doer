@@ -103,14 +103,14 @@ def parse_tableau():
                 'field_name_aliases': parsed_custom_sql.get('field_names_aliases')
             }
 
-    print('METADATA DICT...')
-    pp(metadata_dict)
+    # print('METADATA DICT...')
+    # pp(metadata_dict)
+    #
+    # print('PARSED DATA SOURCE DICT...')
+    # pp(parsed_data_source_dict)
 
-    print('PARSED DATA SOURCE DICT...')
-    pp(parsed_data_source_dict)
-
-    # # Remove all data source xml files from temporary directory
-    # delete_tmp_files_of_type('.xml')
+    # Remove all data source xml files from temporary directory
+    delete_tmp_files_of_type('.xml')
 
 
 def download_data_sources(tableau_server, data_source_ids_list):
@@ -324,21 +324,21 @@ def parse_initial_sql(initial_sql_list):
                 #
                 # Table Names
                 #
-                log('pre table_names', q)
+                # log('pre table_names', q)
                 table_names = [t for t in Parser(q).tables]
-                log('post table_names', table_names)
+                # log('post table_names', table_names)
 
                 table_aliases_dict = Parser(q).tables_aliases
-                log('table_aliases_dict', table_aliases_dict)
+                # log('table_aliases_dict', table_aliases_dict)
 
                 #
                 # Column Names
                 #
                 columns = [c for c in Parser(q).columns]
-                log('columns', columns)
+                # log('columns', columns)
 
                 column_aliases_dict = Parser(q).columns_aliases
-                log('column_aliases_dict', column_aliases_dict)
+                # log('column_aliases_dict', column_aliases_dict)
 
             except ValueError:
                 continue

@@ -12,7 +12,8 @@ Built for data teams that Do their Diligence.
 - [x] Write to DynamoDB from Python
 - [x] QA table and column parsing in Tableau 
 - [x] Fix Custom SQL parsing in Tableau
-- [ ] Fix Initial SQL parsing in Tableau
+- [ ] Get workbook to datasource relationship
+- [ ] [POSTPONED] Fix Initial SQL parsing in Tableau
   - [ ] This is taking up too much time.
   - [ ] Consider using approach from parse_pipelines...
   - [ ] that begins by splitting the queries into statements.
