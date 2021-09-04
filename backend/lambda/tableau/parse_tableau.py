@@ -103,14 +103,11 @@ def parse_tableau():
                 'field_name_aliases': parsed_custom_sql.get('field_names_aliases')
             }
 
-            # print('xml_tables', type(tables), tables)
-            # print('sql_tables', type(parsed_custom_sql.get('source_tables')), parsed_custom_sql.get('source_tables'))
+    print('METADATA DICT...')
+    pp(metadata_dict)
 
-    # print('METADATA DICT...')
-    # pp(metadata_dict)
-
-    # print('PARSED DATA SOURCE DICT...')
-    # pp(parsed_data_source_dict)
+    print('PARSED DATA SOURCE DICT...')
+    pp(parsed_data_source_dict)
 
     # # Remove all data source xml files from temporary directory
     # delete_tmp_files_of_type('.xml')

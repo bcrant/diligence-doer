@@ -13,6 +13,11 @@ Built for data teams that Do their Diligence.
 - [x] QA table and column parsing in Tableau 
 - [x] Fix Custom SQL parsing in Tableau
 - [ ] Fix Initial SQL parsing in Tableau
+  - [ ] This is taking up too much time.
+  - [ ] Consider using approach from parse_pipelines...
+  - [ ] that begins by splitting the queries into statements.
+  - [ ] This way, even if a query only has one statement (like would be _expected_ for initial sql)...
+  - [ ] The query is split into a list and can be iterated over like one
 - [ ] Sort out data model for primary key in Dynamodb
 - [ ] Add support for Github
   - [ ] Ingest repo
