@@ -24,7 +24,7 @@ def parse_tableau():
         print('There are {} data sources on site...'.format(pagination_item.total_available))
 
         # Get initial metadata about all data sources on Tableau Server
-        for datasource in all_data_sources[40:60]:
+        for datasource in all_data_sources:
             # Filter out text files
             text_filters = ('hyper', 'webdata-direct', 'textscan')
             if datasource.datasource_type not in text_filters:
@@ -82,14 +82,12 @@ def parse_tableau():
                 + parsed_custom_sql.get('source_tables', list())
                 + tables
             ))
-            # log('source_tables_list', all_tables)
 
             all_columns = list(set(
                 parsed_initial_sql.get('field_names', list())
                 + parsed_custom_sql.get('field_names', list())
                 + list(columns.keys())
             ))
-            # log('source_columns_list', all_columns)
 
             # Update each output dictionaries with their respective parsed information
             parsed_data_source_dict[ds_id] = {
@@ -113,7 +111,7 @@ def parse_tableau():
 
     # print('PARSED DATA SOURCE DICT...')
     # pp(parsed_data_source_dict)
-    # write_to_dynamodb(parsed_data_source_dict, 'pk')
+    write_to_dynamodb(parsed_data_source_dict, 'pk')
 
     # TODO: Metadata dict should have output to S3 or other shared area for Analysts, Data Governance, etc...
     #       Maybe branch into a company specific version as not necessarily needed for Hackathon
