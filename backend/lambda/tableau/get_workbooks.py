@@ -18,36 +18,34 @@ def get_workbooks():
     AUTHENTICATION, SERVER = authenticate_tableau()
 
     # Initialize dictionaries to store outputs
-    workbook_dict = {}
+    workbooks_dict = {}
 
-    # Log in to Tableau Server and query all Data Sources on Server
+    # Log in to Tableau Server and query all Workbooks on Server
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
         all_workbooks, pagination_item = SERVER.workbooks.get()
         print('There are {} workbooks on site...'.format(pagination_item.total_available))
 
-        for workbook in all_workbooks[0:50]:
-            # Populate connection information about each workbook
+        for workbook in all_workbooks[30:50]:
+            # Populate datasource connection information about each workbook
             SERVER.workbooks.populate_connections(workbook)
 
-            workbook_connection_ids = [
-                connection.id
-                for connection in workbook.connections
-            ]
+            # Store each connection information in a dictionary
+            wb_connections_list_of_dicts = list()
+            for connection in workbook.connections:
+                wb_connections_list_of_dicts.append({
+                    'datasource_id': connection.datasource_id,
+                    'datasource_name': connection.datasource_name,
+                    'connection_id': connection.id
+                })
 
-            workbook_connection_names = [
-                connection.datasource_name
-                for connection in workbook.connections
-            ]
-
-            workbook_dict[workbook.id] = {
+            # Combine workbook and datasource connection information
+            workbooks_dict[workbook.id] = {
+                'workbook_id': workbook.id,
                 'workbook_name': workbook.name,
-                'connections': {
-                    'connection_id': ,
-                    'connection_name':
-                }
+                'datasource_connections': wb_connections_list_of_dicts
             }
-            print('\n\n')
-            # pprint.pprint(vars(workbook))
+
+    pp(workbooks_dict)
 
 
 if __name__ == "__main__":
