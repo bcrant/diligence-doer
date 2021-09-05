@@ -1,10 +1,8 @@
 import os
-import itertools
 import zipfile
 from pathlib import Path
 import sqlparse
-from sqlparse.sql import IdentifierList, Identifier
-from sqlparse.tokens import Keyword, DML
+from sqlparse.tokens import Keyword
 from sql_metadata import Parser
 import xml.etree.ElementTree as ET
 from utils.authentication import authenticate_tableau
@@ -18,7 +16,7 @@ def parse_tableau():
 
     # Initialize dictionaries to store outputs
     metadata_dict = {}
-    parsed_data_source_dict = {}
+    parsed_data_source_dict = {'pk': 'datasource_to_database'}
 
     # Log in to Tableau Server and query all Data Sources on Server
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
@@ -26,7 +24,7 @@ def parse_tableau():
         print('There are {} data sources on site...'.format(pagination_item.total_available))
 
         # Get initial metadata about all data sources on Tableau Server
-        for datasource in all_data_sources[0:60]:
+        for datasource in all_data_sources[40:60]:
             # Filter out text files
             text_filters = ('hyper', 'webdata-direct', 'textscan')
             if datasource.datasource_type not in text_filters:
@@ -43,7 +41,6 @@ def parse_tableau():
 
         # Parse each data source file for its Custom SQL and store in dictionary
         for ds_id, ds_path in data_source_files.items():
-            print('datasource id and datasource path...', ds_id, ds_path)
             with open(ds_path) as f:
                 tree = ET.parse(f)
             root = tree.getroot()
@@ -79,35 +76,49 @@ def parse_tableau():
             tables = get_tables_from_xml(relations)
             columns = get_columns_from_xml(root)
 
-            # TODO: possibly combine the custom sql and tableau data model
-            #       table and field names here. Grab code from style validator
-            #       for unpack unique
+            # Combine parsed XML, Initial SQL, and Custom SQL tables and columns
+            all_tables = list(set(
+                parsed_initial_sql.get('source_tables', list())
+                + parsed_custom_sql.get('source_tables', list())
+                + tables
+            ))
+            # log('source_tables_list', all_tables)
+
+            all_columns = list(set(
+                parsed_initial_sql.get('field_names', list())
+                + parsed_custom_sql.get('field_names', list())
+                + list(columns.keys())
+            ))
+            # log('source_columns_list', all_columns)
 
             # Update each output dictionaries with their respective parsed information
-            metadata_dict[ds_name] = {
+            parsed_data_source_dict[ds_id] = {
                 'datasource_id': ds_id,
+                'datasource_name': ds_name,
+                'source_tables_list': all_tables,
+                'source_field_names_list': all_columns
+            }
+
+            metadata_dict[ds_id] = {
+                'datasource_id': ds_id,
+                'datasource_name': ds_name,
                 **metadata,
                 'raw_custom_sql': custom_sql,
                 'raw_initial_sql': initial_sql,
                 'parsed_custom_sql': parsed_custom_sql,
-                'parsed_initial_sql': parsed_initial_sql
+                'parsed_initial_sql': parsed_initial_sql,
+                'xml_table_names': tables,
+                'xml_field_names': columns,
             }
 
-            parsed_data_source_dict[ds_name] = {
-                'datasource_id': ds_id,
-                'tables': tables,
-                'columns': columns,
-                'source_tables': parsed_custom_sql.get('source_tables'),
-                'source_table_aliases': parsed_custom_sql.get('source_table_aliases'),
-                'field_names': parsed_custom_sql.get('field_names'),
-                'field_name_aliases': parsed_custom_sql.get('field_names_aliases')
-            }
-
-    # print('METADATA DICT...')
-    # pp(metadata_dict)
-    #
     # print('PARSED DATA SOURCE DICT...')
     # pp(parsed_data_source_dict)
+    # write_to_dynamodb(parsed_data_source_dict, 'pk')
+
+    # TODO: Metadata dict should have output to S3 or other shared area for Analysts, Data Governance, etc...
+    #       Maybe branch into a company specific version as not necessarily needed for Hackathon
+    # print('METADATA DICT...')
+    # pp(metadata_dict)
 
     # Remove all data source xml files from temporary directory
     delete_tmp_files_of_type('.xml')
@@ -180,7 +191,8 @@ def get_tables_from_xml(tables_xml):
             cleaned_table_name = strip_brackets(
                 relation.attrib.get('table')
             )
-            tables_list.append(cleaned_table_name)
+            if 'Extract' not in cleaned_table_name:
+                tables_list.append(cleaned_table_name)
 
     # log('tables_list', tables_list)
     return tables_list
@@ -207,6 +219,11 @@ def get_columns_from_xml(root_xml):
             col.attrib.get('name')
         )
         alias = col.attrib.get('caption')
+        # Create human readable column name for Tableau calculated fields
+        if alias:
+            if 'Calculation_' in name:
+                name = str('[Calculated Field]' + alias)
+
         datatype = col.attrib.get('datatype')
         formula = None
         for calc in col.iter('calculation'):
@@ -223,7 +240,7 @@ def get_columns_from_xml(root_xml):
             columns_dict[name]['calculation'] = formula
 
     # Remove auto generated "Number of Records" field from dictionary
-    columns_dict.pop('Number of Records')
+    columns_dict.pop('Number of Records', None)
 
     # log('columns_dict', columns_dict)
     return columns_dict
@@ -368,7 +385,9 @@ def handle_unsupported_query_types(unsupported_sql):
             cleaned_query_split_lines.append(line)
         else:
             if 'SELECT' in line:
-                cleaned_query_split_lines(str('SELECT{}'.format(line.split("SELECT", maxsplit=1)[1])))
+                cleaned_query_split_lines.append(
+                    str('SELECT{}'.format(line.split("SELECT", maxsplit=1)[1]))
+                )
     cleaned_query_string = '\n'.join(cleaned_query_split_lines)
 
     # Format Custom SQL

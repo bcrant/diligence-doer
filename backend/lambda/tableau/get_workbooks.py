@@ -1,16 +1,5 @@
-import os
-import pprint
-import itertools
-import zipfile
-from pathlib import Path
-import sqlparse
-from sqlparse.sql import IdentifierList, Identifier
-from sqlparse.tokens import Keyword, DML
-from sql_metadata import Parser
-import xml.etree.ElementTree as ET
 from utils.authentication import authenticate_tableau
 from utils.dynamodb import write_to_dynamodb
-from utils.helpers import log, pp, strip_brackets
 
 
 def get_workbooks():
@@ -18,14 +7,14 @@ def get_workbooks():
     AUTHENTICATION, SERVER = authenticate_tableau()
 
     # Initialize dictionaries to store outputs
-    workbooks_dict = {}
+    workbooks_dict = {'pk': 'workbook_to_datasource'}
 
     # Log in to Tableau Server and query all Workbooks on Server
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
         all_workbooks, pagination_item = SERVER.workbooks.get()
         print('There are {} workbooks on site...'.format(pagination_item.total_available))
 
-        for workbook in all_workbooks[30:50]:
+        for workbook in all_workbooks:
             # Populate datasource connection information about each workbook
             SERVER.workbooks.populate_connections(workbook)
 
@@ -38,14 +27,22 @@ def get_workbooks():
                     'connection_id': connection.id
                 })
 
+            unique_connection_ids_list = list()
+            for conn in wb_connections_list_of_dicts:
+                unique_connection_ids_list.append(
+                    conn.get('connection_id')
+                )
+
             # Combine workbook and datasource connection information
             workbooks_dict[workbook.id] = {
                 'workbook_id': workbook.id,
                 'workbook_name': workbook.name,
-                'datasource_connections': wb_connections_list_of_dicts
+                'connection_metadata': wb_connections_list_of_dicts,
+                'datasource_ids_list': unique_connection_ids_list
             }
 
-    pp(workbooks_dict)
+    # Write output to AWS DynamoDB
+    write_to_dynamodb(record=workbooks_dict, pk='pk')
 
 
 if __name__ == "__main__":

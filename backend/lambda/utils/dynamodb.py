@@ -2,13 +2,13 @@ import boto3
 from helpers import log
 
 
-def write_to_dynamodb(record):
+def write_to_dynamodb(record, pk):
     """
     Write to DynamoDB
 
     Args:
         record (dict): A Python Dictionary containing at minimum 'pk' key and value and no keys with Null values.
-
+        pk (str): The field name of the Primary Key value in record
     Returns:
         None
 
@@ -33,7 +33,7 @@ def write_to_dynamodb(record):
 
     # Validate input is Python Dictionary
     if isinstance(record, dict):
-        if bool(record.get('pk')):
+        if bool(record.get(pk)):
             response = table.put_item(
                 Item=record
             )
