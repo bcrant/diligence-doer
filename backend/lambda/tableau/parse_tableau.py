@@ -93,7 +93,7 @@ def parse_tableau():
             parsed_data_source_dict[ds_id] = {
                 'datasource_id': ds_id,
                 'datasource_name': ds_name,
-                'source_tables_list': all_tables,
+                'source_table_names_list': all_tables,
                 'source_field_names_list': all_columns
             }
 
@@ -111,7 +111,7 @@ def parse_tableau():
 
     # print('PARSED DATA SOURCE DICT...')
     # pp(parsed_data_source_dict)
-    write_to_dynamodb(parsed_data_source_dict, 'pk')
+    write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
 
     # TODO: Metadata dict should have output to S3 or other shared area for Analysts, Data Governance, etc...
     #       Maybe branch into a company specific version as not necessarily needed for Hackathon
@@ -418,7 +418,6 @@ def validate_parenthesis(query_string):
     lp = '('
     rp = ')'
     if not query_string.count(lp) == query_string.count(rp):
-        print('UNEQUAL amount of parenthesis in query...')
         equal_parenthesis = None
         if query_string.count(lp) < query_string.count(rp):
             equal_parenthesis = query_string.rsplit(rp, maxsplit=1)[0]
