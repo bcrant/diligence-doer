@@ -1,5 +1,4 @@
 import pprint
-import zipfile
 from parse_tableau import parse_tableau
 from utils.authentication import authenticate_tableau
 from utils.dynamodb import write_to_dynamodb
@@ -22,7 +21,7 @@ def get_workbooks():
         all_workbooks, pagination_item = SERVER.workbooks.get()
         print('There are {} workbooks on site...'.format(pagination_item.total_available))
 
-        # Download and each Workbook, extract the .twb files and store path to each .twb in dictionary.
+        # Download each Workbook, extract the .twb files, and store path to each .twb in dictionary.
         workbook_path_dict = download_workbooks(SERVER, all_workbooks)
 
 
@@ -31,25 +30,26 @@ def download_workbooks(tableau_server, workbooks):
     file_path_dict = dict()
 
     for workbook in workbooks:
+        # Download Packaged Tableau Workbook file (.twbx)
         zipped_wb_path = tableau_server.workbooks.download(
             workbook.id,
             filepath='./tmp',
             include_extract=False
         )
 
-        # Packaged Workbooks (.twbx) files are zipped archives. Here we extract the Workbook (.twb) only.
-        with zipfile.ZipFile(zipped_wb_path) as packaged_data_source:
-            print('namelist: ', packaged_data_source.namelist())
-            for wb_file in packaged_data_source.namelist():
-                if '.twb' in wb_file:
-                    unzipped_wb_path = packaged_data_source.extract(wb_file, './tmp')
-                    print(f'Extracting {wb_file} file from {workbook.name}...')
+        # Extract Tableau Workbook file (.twb)
+        unzipped_wb_path = unzip_packaged_tableau_file(
+            zipped_file=zipped_wb_path,
+            output_file_type='twb',
+            output_dir='tmp',
+            obj_name=workbook.name
+        )
 
-                    # Convert .twb to .xml
-                    xml_path = convert_tableau_file_to_xml(unzipped_wb_path)
+        # Convert .twb to .xml
+        xml_path = convert_tableau_file_to_xml(unzipped_wb_path)
 
-                    # Add path to dict
-                    file_path_dict[workbook.id] = xml_path
+        # Add path to dict
+        file_path_dict[workbook.id] = xml_path
 
     # Remove all .twbx from temporary directory
     delete_tmp_files_of_type('twbx', 'tmp')

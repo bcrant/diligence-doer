@@ -1,9 +1,7 @@
-import pprint
-import zipfile
 import sqlparse
+import xml.etree.ElementTree as ET
 from sqlparse.tokens import Keyword
 from sql_metadata import Parser
-import xml.etree.ElementTree as ET
 from utils.authentication import authenticate_tableau
 from utils.helpers import *
 
@@ -22,16 +20,15 @@ def parse_tableau():
         all_data_sources, pagination_item = SERVER.datasources.get()
         print('There are {} data sources on site...'.format(pagination_item.total_available))
 
-        # Get initial metadata about all data sources on Tableau Server
+        # Get initial metadata about Datasources on Server
         for datasource in all_data_sources:
-            # print('[DS] Before:\t', vars(datasource))
 
             # Populate connection information about each datasource
+            # print('[DS] Before:\t\t', vars(datasource))
             SERVER.datasources.populate_connections(datasource)
+            # print('[DS] After:\t\t', vars(datasource))
 
-            connection_dicts_list = list()
             for connection in datasource.connections:
-                # print('[DS] After:\t\t', vars(connection))
                 log('[DS] datasource.id', datasource.id)
                 log('[DS] datasource.name', datasource.name)
                 log('[DS] connection.id', connection.id)
@@ -39,122 +36,110 @@ def parse_tableau():
                 connection_dict = {
                     'datasource_id': datasource.id,
                     'datasource_name': datasource.name,
+                    'datasource_type': datasource.datasource_type,
                     'connection_id': connection.id
                 }
 
-                connection_dicts_list.append(connection_dict)
+                connections_list.append(connection_dict)
 
-            connections_list.extend(connection_dicts_list)
+        # Download each Datasource that is NOT a text file, extract the .tds files, and return paths to each .tds.
+        datasource_path_dict = download_data_sources(SERVER, all_data_sources)
 
-    # print(connections_list)
-    # for i in connections_list:
-    #     print(i.get('datasource_id'))
+        # Parse each data source file for its Custom SQL and store in dictionary
+        for ds_id, ds_path in datasource_path_dict.items():
+            with open(ds_path) as f:
+                tree = ET.parse(f)
+            root = tree.getroot()
 
-    # # Filter out text files
-    # text_filters = ('hyper', 'webdata-direct', 'textscan')
-    # if datasource.datasource_type not in text_filters:
-    #     # print('YO YO YO', datasource.datasource_id, '\t\t', datasource.id)
-    #     log('datasource.id', datasource.id)
-    #     metadata_dict[datasource.id] = {
-    #         'datasource_id': datasource.id,
-    #         'datasource_name': datasource.name,
-    #         'datasource_type': datasource.datasource_type,
-    #     }
-    #
-        # Download only data sources that are not text files on Tableau Server and return a dict of paths to those files
-    #     data_source_files = download_data_sources(SERVER, metadata_dict.keys())
-    #
-    #     # Parse each data source file for its Custom SQL and store in dictionary
-    #     for ds_id, ds_path in data_source_files.items():
-    #         with open(ds_path) as f:
-    #             tree = ET.parse(f)
-    #         root = tree.getroot()
-    #
-    #         # Get human readable name of datasource
-    #         ds_name = metadata_dict.get(ds_id).get('datasource_name')
-    #
-    #         # Connection and Relation properties of data source xml
-    #         connections = [c for c in root.iter('connection')]
-    #         relations = [r for r in root.iter('relation')]
-    #
-    #         #
-    #         # NOTE: It is important to collect the tables and columns from the
-    #         # XML elements as well as the inner SQL text of Tableau data sources.
-    #         #
-    #         # Not all tables are defined in Custom or Initial SQL.
-    #         #
-    #         # Once connected to a database in Tableau, users can drag and drop
-    #         # tables onto the data pane (where the Tableau Data Model is defined in UI).
-    #         #
-    #
-    #         # These are the table and field names as defined in the Tableau Data Model.
-    #         tables = get_tables_from_xml(relations)
-    #         columns = get_columns_from_xml(root)
-    #
-    #         # These are the table and field names as defined in Initial SQL
-    #         initial_sql = get_initial_sql(connections)
-    #         parsed_initial_sql = parse_initial_sql(initial_sql)
-    #
-    #         # These are the table and field names as defined in Custom SQL.
-    #         custom_sql = get_custom_sql(relations)
-    #         parsed_custom_sql = parse_custom_sql(custom_sql)
-    #
-    #         # Combine parsed XML (Tableau Data Model), Initial SQL, and Custom SQL tables and columns
-    #         all_tables = list(set(
-    #             parsed_initial_sql.get('source_tables', list())
-    #             + parsed_custom_sql.get('source_tables', list())
-    #             + tables
-    #         ))
-    #
-    #         all_columns = list(set(
-    #             parsed_initial_sql.get('field_names', list())
-    #             + parsed_custom_sql.get('field_names', list())
-    #             + list(columns.keys())
-    #         ))
-    #
-    #         # Update each output dictionaries with their respective parsed information
-    #         parsed_data_source_dict[ds_id] = {
-    #             'datasource_id': ds_id,
-    #             'datasource_name': ds_name,
-    #             'source_table_names_list': all_tables,
-    #             'source_field_names_list': all_columns
-    #         }
-    #
-    # # print('PARSED DATA SOURCE DICT...')
-    # # pp(parsed_data_source_dict)
-    # # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
-    #
-    # # Remove all data source xml files from temporary directory
-    # delete_tmp_files_of_type('xml', 'tmp')
-    #
-    # return parsed_data_source_dict
+            # Get human readable name of datasource
+            ds_name = metadata_dict.get(ds_id).get('datasource_name')
+
+            # Connection and Relation properties of data source xml
+            connections = [c for c in root.iter('connection')]
+            relations = [r for r in root.iter('relation')]
+
+            #
+            # NOTE: It is important to collect the tables and columns from the
+            # XML elements as well as the inner SQL text of Tableau data sources.
+            #
+            # Not all tables are defined in Custom or Initial SQL.
+            #
+            # Once connected to a database in Tableau, users can drag and drop
+            # tables onto the data pane (where the Tableau Data Model is defined in UI).
+            #
+
+            # These are the table and field names as defined in the Tableau Data Model.
+            tables = get_tables_from_xml(relations)
+            columns = get_columns_from_xml(root)
+
+            # These are the table and field names as defined in Initial SQL
+            initial_sql = get_initial_sql(connections)
+            parsed_initial_sql = parse_initial_sql(initial_sql)
+
+            # These are the table and field names as defined in Custom SQL.
+            custom_sql = get_custom_sql(relations)
+            parsed_custom_sql = parse_custom_sql(custom_sql)
+
+            # Combine parsed XML (Tableau Data Model), Initial SQL, and Custom SQL tables and columns
+            all_tables = list(set(
+                parsed_initial_sql.get('source_tables', list())
+                + parsed_custom_sql.get('source_tables', list())
+                + tables
+            ))
+
+            all_columns = list(set(
+                parsed_initial_sql.get('field_names', list())
+                + parsed_custom_sql.get('field_names', list())
+                + list(columns.keys())
+            ))
+
+            # Update each output dictionaries with their respective parsed information
+            parsed_data_source_dict[ds_id] = {
+                'datasource_id': ds_id,
+                'datasource_name': ds_name,
+                'source_table_names_list': all_tables,
+                'source_field_names_list': all_columns
+            }
+
+    # print('PARSED DATA SOURCE DICT...')
+    # pp(parsed_data_source_dict)
+    # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
+
+    # Remove all data source xml files from temporary directory
+    delete_tmp_files_of_type('xml', 'tmp')
+
+    return parsed_data_source_dict
 
 
-def download_data_sources(tableau_server, data_source_ids_list):
+def download_data_sources(tableau_server, datasources):
     # Store path to each file
     file_path_dict = dict()
 
-    # Download each data source on Tableau Server and parse for its Custom SQL and additional Metadata
-    print('Extracting .tds files from each .tdsx')
-    for ds_id in data_source_ids_list:
-        zipped_ds_path = tableau_server.datasources.download(
-            ds_id,
-            filepath='./tmp',
-            include_extract=False
-        )
+    for datasource in datasources:
+        # Filter out text files
+        text_filters = ('hyper', 'webdata-direct', 'textscan')
+        if datasource.datasource_type not in text_filters:
 
-        # Packaged Datasource (.tdsx) files are zipped archives. Here we extract the Datasource (.tds) only.
-        with zipfile.ZipFile(zipped_ds_path) as packaged_data_source:
-            for ds_file in packaged_data_source.namelist():
-                if '.tds' in ds_file:
-                    unzipped_ds_path = packaged_data_source.extract(ds_file, './tmp')
-                    # print(f'Extracting .tds file from...\t {ds_file}')
+            # Download Packaged Tableau Datasource file (.tdsx)
+            zipped_ds_path = tableau_server.datasources.download(
+                datasource.id,
+                filepath='./tmp',
+                include_extract=False
+            )
 
-                    # Convert .tds to .xml
-                    xml_path = convert_tableau_file_to_xml(unzipped_ds_path)
+            # Extract Tableau Datasource file (.tds)
+            unzipped_ds_path = unzip_packaged_tableau_file(
+                zipped_file=zipped_ds_path,
+                output_file_type='tds',
+                output_dir='tmp',
+                obj_name=datasource.name
+            )
 
-                    # Add path to dict
-                    file_path_dict[ds_id] = xml_path
+            # Convert .tds to .xml
+            xml_path = convert_tableau_file_to_xml(unzipped_ds_path)
+
+            # Add path to dict
+            file_path_dict[datasource.id] = xml_path
 
     # Remove all .tdsx from temporary directory
     delete_tmp_files_of_type('tdsx', 'tmp')
