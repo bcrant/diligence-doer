@@ -1,4 +1,5 @@
 import os
+import pprint
 import zipfile
 from pathlib import Path
 import sqlparse
@@ -6,7 +7,6 @@ from sqlparse.tokens import Keyword
 from sql_metadata import Parser
 import xml.etree.ElementTree as ET
 from utils.authentication import authenticate_tableau
-from utils.dynamodb import write_to_dynamodb
 from utils.helpers import log, pp, strip_brackets
 
 
@@ -15,8 +15,9 @@ def parse_tableau():
     AUTHENTICATION, SERVER = authenticate_tableau()
 
     # Initialize dictionaries to store outputs
-    metadata_dict = {}
-    parsed_data_source_dict = {'pk': 'datasource_to_database'}
+    metadata_dict = dict()
+    parsed_data_source_dict = dict()
+    connections_list = list()
 
     # Log in to Tableau Server and query all Data Sources on Server
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
@@ -25,106 +26,115 @@ def parse_tableau():
 
         # Get initial metadata about all data sources on Tableau Server
         for datasource in all_data_sources:
-            # Filter out text files
-            text_filters = ('hyper', 'webdata-direct', 'textscan')
-            if datasource.datasource_type not in text_filters:
-                # print(datasource.id, '\t', datasource.datasource_type, '\t', datasource.name)
-                metadata_dict[datasource.id] = {
+            # print('[DS] Before:\t', vars(datasource))
+
+            # Populate connection information about each datasource
+            SERVER.datasources.populate_connections(datasource)
+
+            connection_dicts_list = list()
+            for connection in datasource.connections:
+                # print('[DS] After:\t\t', vars(connection))
+                log('[DS] datasource.id', datasource.id)
+                log('[DS] datasource.name', datasource.name)
+                log('[DS] connection.id', connection.id)
+
+                connection_dict = {
                     'datasource_id': datasource.id,
                     'datasource_name': datasource.name,
-                    'datasource_type': datasource.datasource_type,
-                    'connections': []
+                    'connection_id': connection.id
                 }
 
+                connection_dicts_list.append(connection_dict)
+
+            connections_list.extend(connection_dicts_list)
+
+    # print(connections_list)
+    # for i in connections_list:
+    #     print(i.get('datasource_id'))
+
+    # # Filter out text files
+    # text_filters = ('hyper', 'webdata-direct', 'textscan')
+    # if datasource.datasource_type not in text_filters:
+    #     # print('YO YO YO', datasource.datasource_id, '\t\t', datasource.id)
+    #     log('datasource.id', datasource.id)
+    #     metadata_dict[datasource.id] = {
+    #         'datasource_id': datasource.id,
+    #         'datasource_name': datasource.name,
+    #         'datasource_type': datasource.datasource_type,
+    #     }
+    #
         # Download only data sources that are not text files on Tableau Server and return a dict of paths to those files
-        data_source_files = download_data_sources(SERVER, metadata_dict.keys())
-
-        # Parse each data source file for its Custom SQL and store in dictionary
-        for ds_id, ds_path in data_source_files.items():
-            with open(ds_path) as f:
-                tree = ET.parse(f)
-            root = tree.getroot()
-
-            # Get human readable name of datasource
-            ds_name = metadata_dict.get(ds_id).get('datasource_name')
-
-            # METADATA - Connection properties of data source xml
-            connections = [c for c in root.iter('connection')]
-            metadata = get_connection_metadata(connections)
-
-            # INITIAL SQL
-            initial_sql = get_initial_sql(connections)
-            parsed_initial_sql = parse_initial_sql(initial_sql)
-
-            # SCHEMA - Relation properties of data source xml
-            #
-            # NOTE: It is important to collect the tables and columns from the
-            # XML elements as well as the inner SQL text of Tableau data sources.
-            #
-            # Not all tables are defined in Custom or Initial SQL.
-            #
-            # Once connected to a database in Tableau, users can drag and drop
-            # tables onto the data pane (where the Tableau Data Model is defined in UI).
-            #
-            relations = [r for r in root.iter('relation')]
-
-            # These are the table and field names as defined in Custom SQL.
-            custom_sql = get_custom_sql(relations)
-            parsed_custom_sql = parse_custom_sql(custom_sql)
-
-            # These are the table and field names as defined in the Tableau Data Model.
-            tables = get_tables_from_xml(relations)
-            columns = get_columns_from_xml(root)
-
-            # Combine parsed XML, Initial SQL, and Custom SQL tables and columns
-            all_tables = list(set(
-                parsed_initial_sql.get('source_tables', list())
-                + parsed_custom_sql.get('source_tables', list())
-                + tables
-            ))
-
-            all_columns = list(set(
-                parsed_initial_sql.get('field_names', list())
-                + parsed_custom_sql.get('field_names', list())
-                + list(columns.keys())
-            ))
-
-            # Update each output dictionaries with their respective parsed information
-            parsed_data_source_dict[ds_id] = {
-                'datasource_id': ds_id,
-                'datasource_name': ds_name,
-                'source_table_names_list': all_tables,
-                'source_field_names_list': all_columns
-            }
-
-            metadata_dict[ds_id] = {
-                'datasource_id': ds_id,
-                'datasource_name': ds_name,
-                **metadata,
-                'raw_custom_sql': custom_sql,
-                'raw_initial_sql': initial_sql,
-                'parsed_custom_sql': parsed_custom_sql,
-                'parsed_initial_sql': parsed_initial_sql,
-                'xml_table_names': tables,
-                'xml_field_names': columns,
-            }
-
-    # print('PARSED DATA SOURCE DICT...')
-    # pp(parsed_data_source_dict)
-    write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
-
-    # TODO: Metadata dict should have output to S3 or other shared area for Analysts, Data Governance, etc...
-    #       Maybe branch into a company specific version as not necessarily needed for Hackathon
-    # print('METADATA DICT...')
-    # pp(metadata_dict)
-
-    # Remove all data source xml files from temporary directory
-    delete_tmp_files_of_type('.xml')
+    #     data_source_files = download_data_sources(SERVER, metadata_dict.keys())
+    #
+    #     # Parse each data source file for its Custom SQL and store in dictionary
+    #     for ds_id, ds_path in data_source_files.items():
+    #         with open(ds_path) as f:
+    #             tree = ET.parse(f)
+    #         root = tree.getroot()
+    #
+    #         # Get human readable name of datasource
+    #         ds_name = metadata_dict.get(ds_id).get('datasource_name')
+    #
+    #         # Connection and Relation properties of data source xml
+    #         connections = [c for c in root.iter('connection')]
+    #         relations = [r for r in root.iter('relation')]
+    #
+    #         #
+    #         # NOTE: It is important to collect the tables and columns from the
+    #         # XML elements as well as the inner SQL text of Tableau data sources.
+    #         #
+    #         # Not all tables are defined in Custom or Initial SQL.
+    #         #
+    #         # Once connected to a database in Tableau, users can drag and drop
+    #         # tables onto the data pane (where the Tableau Data Model is defined in UI).
+    #         #
+    #
+    #         # These are the table and field names as defined in the Tableau Data Model.
+    #         tables = get_tables_from_xml(relations)
+    #         columns = get_columns_from_xml(root)
+    #
+    #         # These are the table and field names as defined in Initial SQL
+    #         initial_sql = get_initial_sql(connections)
+    #         parsed_initial_sql = parse_initial_sql(initial_sql)
+    #
+    #         # These are the table and field names as defined in Custom SQL.
+    #         custom_sql = get_custom_sql(relations)
+    #         parsed_custom_sql = parse_custom_sql(custom_sql)
+    #
+    #         # Combine parsed XML (Tableau Data Model), Initial SQL, and Custom SQL tables and columns
+    #         all_tables = list(set(
+    #             parsed_initial_sql.get('source_tables', list())
+    #             + parsed_custom_sql.get('source_tables', list())
+    #             + tables
+    #         ))
+    #
+    #         all_columns = list(set(
+    #             parsed_initial_sql.get('field_names', list())
+    #             + parsed_custom_sql.get('field_names', list())
+    #             + list(columns.keys())
+    #         ))
+    #
+    #         # Update each output dictionaries with their respective parsed information
+    #         parsed_data_source_dict[ds_id] = {
+    #             'datasource_id': ds_id,
+    #             'datasource_name': ds_name,
+    #             'source_table_names_list': all_tables,
+    #             'source_field_names_list': all_columns
+    #         }
+    #
+    # # print('PARSED DATA SOURCE DICT...')
+    # # pp(parsed_data_source_dict)
+    # # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
+    #
+    # # Remove all data source xml files from temporary directory
+    # delete_tmp_files_of_type('.xml')
+    #
+    # return parsed_data_source_dict
 
 
 def download_data_sources(tableau_server, data_source_ids_list):
     # Store path to each file
-    file_path_dict = {}
+    file_path_dict = dict()
 
     # Download each data source on Tableau Server and parse for its Custom SQL and additional Metadata
     print('Extracting .tds files from each .tdsx')
@@ -149,41 +159,15 @@ def download_data_sources(tableau_server, data_source_ids_list):
                     # Add path to dict
                     file_path_dict[ds_id] = tds_as_xml
 
-                else:
-                    print(f'No .tds file found in...\t\t {ds_file}')
-
     # Remove all .tdsx from temporary directory
     delete_tmp_files_of_type('.tdsx')
 
     return file_path_dict
 
 
-def get_connection_metadata(connection_xml):
-    connection_metadata = {}
-    connection_types_list = []
-    for conn in connection_xml:
-        connection_type = conn.attrib.get('class')
-        if connection_type != 'federated':
-            connection_types_list.append(connection_type)
-
-        # If connected to a cloud database, store additional connection_metadata
-        if connection_type in ['snowflake', 'redshift']:
-            connection_metadata['server_address'] = conn.attrib.get('server')
-            connection_metadata['server_port'] = conn.attrib.get('port')
-            connection_metadata['connection_dbname'] = conn.attrib.get('dbname')
-            connection_metadata['connection_schema'] = conn.attrib.get('schema')
-            connection_metadata['connection_warehouse'] = conn.attrib.get('warehouse')
-            if bool(conn.attrib.get('one-time-sql')):
-                connection_metadata['has_initial_sql'] = True
-
-    connection_metadata['connections'] = connection_types_list
-
-    return connection_metadata
-
-
 def get_tables_from_xml(tables_xml):
     # Get table names
-    tables_list = []
+    tables_list = list()
     for relation in tables_xml:
         if relation.attrib.get('type') == 'table':
             cleaned_table_name = strip_brackets(
@@ -197,7 +181,7 @@ def get_tables_from_xml(tables_xml):
 
 
 def get_columns_from_xml(root_xml):
-    columns_dict = {}
+    columns_dict = dict()
 
     # Get columns defined as map local-remote columns as key-value pairs
     cols_xml = root_xml.iter('cols')
@@ -206,7 +190,8 @@ def get_columns_from_xml(root_xml):
             name = strip_brackets(m.attrib.get('key'))
             remote = strip_brackets(m.attrib.get('value'))
 
-            columns_dict[name] = {
+            columns_dict[remote] = {
+                'local_column': name,
                 'remote_column': remote
             }
 
@@ -220,14 +205,14 @@ def get_columns_from_xml(root_xml):
         # Create human readable column name for Tableau calculated fields
         if alias:
             if 'Calculation_' in name:
-                name = str('[Calculated Field]' + alias)
+                name = str('[Calculated Field] ' + alias)
 
         datatype = col.attrib.get('datatype')
         formula = None
         for calc in col.iter('calculation'):
             formula = calc.attrib.get('formula')
 
-        columns_dict[name] = {}
+        columns_dict[name] = dict()
         if alias:
             columns_dict[name]['alias'] = alias
 
@@ -245,7 +230,7 @@ def get_columns_from_xml(root_xml):
 
 
 def get_initial_sql(initial_sql_xml):
-    initial_sql_list = []
+    initial_sql_list = list()
     for conn in initial_sql_xml:
         # Store Initial SQL query
         if bool(conn.attrib.get('one-time-sql')):
@@ -264,7 +249,7 @@ def get_initial_sql(initial_sql_xml):
 
 def get_custom_sql(custom_sql_xml):
     # Get Custom SQL
-    custom_sql_list = []
+    custom_sql_list = list()
     for sql_item in custom_sql_xml:
         if sql_item.attrib.get('type') == 'text':
             # Format Custom SQL
@@ -282,7 +267,7 @@ def get_custom_sql(custom_sql_xml):
 
 def parse_custom_sql(custom_sql_list):
     # Parse SQL
-    table_metadata_dict = {}
+    table_metadata_dict = dict()
     for q in custom_sql_list:
         try:
             #
@@ -324,7 +309,7 @@ def parse_custom_sql(custom_sql_list):
 
 def parse_initial_sql(initial_sql_list):
     # Parse SQL
-    table_metadata_dict = {}
+    table_metadata_dict = dict()
     for get_q in initial_sql_list:
         # If there is no SELECT statement, we can assume this is a TEMP TABLE and disregard
         if 'SELECT' in get_q:
@@ -377,7 +362,7 @@ def parse_initial_sql(initial_sql_list):
 def handle_unsupported_query_types(unsupported_sql):
     # Drop lines containing unsupported commands
     unsupported_commands = ['CREATE', 'DROP', 'TEMP']
-    cleaned_query_split_lines = []
+    cleaned_query_split_lines = list()
     for line in unsupported_sql.splitlines():
         if not any(cmd in line for cmd in unsupported_commands):
             cleaned_query_split_lines.append(line)

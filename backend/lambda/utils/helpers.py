@@ -17,4 +17,4 @@ def strip_brackets(field_name):
 def log(var_name, var):
     # if type(var) == str:
     #     var = var.replace('\n', '').strip()
-    return print('{:24s} {:6s} \t {}'.format(str(var_name), str(type(var)), str(var)))
+    return print('{:32s} {:6s} \t {}'.format(str(var_name), str(type(var)), str(var)))
