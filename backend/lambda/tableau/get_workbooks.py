@@ -1,10 +1,9 @@
 import pprint
-import os
 import zipfile
 from parse_tableau import parse_tableau
 from utils.authentication import authenticate_tableau
 from utils.dynamodb import write_to_dynamodb
-from utils.helpers import pp, log
+from utils.helpers import *
 
 
 def get_workbooks():
@@ -23,45 +22,39 @@ def get_workbooks():
         all_workbooks, pagination_item = SERVER.workbooks.get()
         print('There are {} workbooks on site...'.format(pagination_item.total_available))
 
-        all_workbook_ids_list = [workbook.id for workbook in all_workbooks]
+        # Download and each Workbook, extract the .twb files and store path to each .twb in dictionary.
+        workbook_path_dict = download_workbooks(SERVER, all_workbooks)
 
-        download_workbooks(SERVER, all_workbook_ids_list)
 
-
-def download_workbooks(tableau_server, workbook_ids_list):
+def download_workbooks(tableau_server, workbooks):
     # Store path
     file_path_dict = dict()
 
-    for wb_id in workbook_ids_list:
+    for workbook in workbooks:
         zipped_wb_path = tableau_server.workbooks.download(
-            wb_id,
+            workbook.id,
             filepath='./tmp',
             include_extract=False
         )
 
-    # Packaged Workbooks (.twbx) files are zipped archives. Here we extract the Datasource (.tds) only.
-    with zipfile.ZipFile(zipped_ds_path) as packaged_data_source:
-        for ds_file in packaged_data_source.namelist():
-            if '.tds' in ds_file:
-                unzipped_ds_path = packaged_data_source.extract(ds_file, './tmp')
-                # print(f'Extracting .tds file from...\t {ds_file}')
+        # Packaged Workbooks (.twbx) files are zipped archives. Here we extract the Workbook (.twb) only.
+        with zipfile.ZipFile(zipped_wb_path) as packaged_data_source:
+            print('namelist: ', packaged_data_source.namelist())
+            for wb_file in packaged_data_source.namelist():
+                if '.twb' in wb_file:
+                    unzipped_wb_path = packaged_data_source.extract(wb_file, './tmp')
+                    print(f'Extracting {wb_file} file from {workbook.name}...')
 
-                # Convert .tds to .xml
-                tds_file = Path(os.getcwd() + '/' + unzipped_ds_path)
-                tds_as_xml = tds_file.rename(tds_file.with_suffix('.xml'))
+                    # Convert .twb to .xml
+                    xml_path = convert_tableau_file_to_xml(unzipped_wb_path)
 
-                # Add path to dict
-                file_path_dict[ds_id] = tds_as_xml
+                    # Add path to dict
+                    file_path_dict[workbook.id] = xml_path
 
+    # Remove all .twbx from temporary directory
+    delete_tmp_files_of_type('twbx', 'tmp')
 
-
-
-
-
-
-
-
-
+    return file_path_dict
 
         # for workbook in all_workbooks:
             # # Populate connection information about each workbook

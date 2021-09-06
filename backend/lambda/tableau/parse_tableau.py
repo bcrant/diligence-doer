@@ -1,13 +1,11 @@
-import os
 import pprint
 import zipfile
-from pathlib import Path
 import sqlparse
 from sqlparse.tokens import Keyword
 from sql_metadata import Parser
 import xml.etree.ElementTree as ET
 from utils.authentication import authenticate_tableau
-from utils.helpers import log, pp, strip_brackets
+from utils.helpers import *
 
 
 def parse_tableau():
@@ -127,7 +125,7 @@ def parse_tableau():
     # # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
     #
     # # Remove all data source xml files from temporary directory
-    # delete_tmp_files_of_type('.xml')
+    # delete_tmp_files_of_type('xml', 'tmp')
     #
     # return parsed_data_source_dict
 
@@ -153,14 +151,13 @@ def download_data_sources(tableau_server, data_source_ids_list):
                     # print(f'Extracting .tds file from...\t {ds_file}')
 
                     # Convert .tds to .xml
-                    tds_file = Path(os.getcwd() + '/' + unzipped_ds_path)
-                    tds_as_xml = tds_file.rename(tds_file.with_suffix('.xml'))
+                    xml_path = convert_tableau_file_to_xml(unzipped_ds_path)
 
                     # Add path to dict
-                    file_path_dict[ds_id] = tds_as_xml
+                    file_path_dict[ds_id] = xml_path
 
     # Remove all .tdsx from temporary directory
-    delete_tmp_files_of_type('.tdsx')
+    delete_tmp_files_of_type('tdsx', 'tmp')
 
     return file_path_dict
 
@@ -411,13 +408,6 @@ def validate_parenthesis(query_string):
         return validate_parenthesis(equal_parenthesis)
     else:
         return query_string
-
-
-def delete_tmp_files_of_type(filetype_str):
-    tmp_dir = os.getcwd() + '/tmp'
-    for f in os.listdir(Path(tmp_dir)):
-        if filetype_str in f:
-            os.remove(Path(tmp_dir + '/' + f))
 
 
 if __name__ == "__main__":
