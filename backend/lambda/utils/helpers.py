@@ -51,7 +51,6 @@ def unzip_packaged_tableau_file(zipped_file, output_file_type, output_dir, obj_n
     """
 
     with zipfile.ZipFile(zipped_file) as packaged_file:
-        print('namelist: ', packaged_file.namelist())
         for f in packaged_file.namelist():
             if str('.' + output_file_type) in f:
                 unzipped_path = packaged_file.extract(f, str('./' + output_dir))
@@ -73,6 +72,3 @@ def delete_tmp_files_of_type(filetype_str, dir_name):
     for f in os.listdir(Path(tmp_dir)):
         if str('.' + filetype_str) in f:
             os.remove(Path(tmp_dir + '/' + f))
-        else:
-            print(f'No files of type "{filetype_str}" found in "{tmp_dir}"')
-

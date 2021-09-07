@@ -1,6 +1,7 @@
 # import tableauserverclient as TSC
 from metadata_queries import MetadataQueries
 from utils.authentication import authenticate_tableau
+from utils.dynamodb import write_to_dynamodb
 from utils.helpers import *
 
 
@@ -11,19 +12,6 @@ def get_metadata():
     # Log in to Tableau Server and query the Metadata API
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
         # Query the Metadata API and store the response in resp
-
-        # workbooks = SERVER.metadata.query(MetadataQueries.WORKBOOKS)
-        # pp(workbooks['data'])
-
-        # databases = SERVER.metadata.query(MetadataQueries.DATABASES)
-        # pp(databases['data'])
-
-        # database_tables = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES)
-        # pp(database_tables['data'])
-
-        # workbook_fields = TSC.Pager(SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS))
-        # workbook_fields = SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS)
-        # pp(workbook_fields)
 
         tables_to_dashboards = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES_TO_DASHBOARDS)\
             .get('data')\
@@ -43,6 +31,8 @@ def get_metadata():
             table_dict.pop('name')
             table_dict['schema_name'] = table_dict.get('schema')
             table_dict.pop('schema')
+            table_dict['pk'] = table_dict.get('luid')
+            table_dict.pop('luid')
 
             # Move column names into list
             cols = list()
@@ -57,11 +47,23 @@ def get_metadata():
                     ])
             table_dict['columns'] = cols
 
-            pp(table_dict)
-        # pp(tables_to_dashboards)
+            write_to_dynamodb(
+                record=table_dict,
+                pk='pk'
+            )
 
-        # for table_dict in tables_to_dashboards:
-        #     print(table_dict)
+        # workbooks = SERVER.metadata.query(MetadataQueries.WORKBOOKS)
+        # pp(workbooks['data'])
+
+        # databases = SERVER.metadata.query(MetadataQueries.DATABASES)
+        # pp(databases['data'])
+
+        # database_tables = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES)
+        # pp(database_tables['data'])
+
+        # workbook_fields = TSC.Pager(SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS))
+        # workbook_fields = SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS)
+        # pp(workbook_fields)
 
         # custom_sql = SERVER.metadata.query(MetadataQueries.CUSTOM_SQL_TABLES)
         # pp(custom_sql['data'])

@@ -174,6 +174,7 @@ class MetadataQueries:
     query table_fields {
         # databaseTables (filter: {connectionTypeWithin: ["hyper", "webdata-direct", "textscan"]}}) {
         databaseTables {
+            luid
             name
             fullName
             # NOTE: Take schema value with a grain of salt. Give "name" and "fullName" precedence.

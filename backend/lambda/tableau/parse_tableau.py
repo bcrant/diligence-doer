@@ -51,8 +51,8 @@ def parse_tableau():
                 tree = ET.parse(f)
             root = tree.getroot()
 
-            # Get human readable name of datasource
-            ds_name = metadata_dict.get(ds_id).get('datasource_name')
+            # # Get human readable name of datasource
+            # ds_name = metadata_dict.get(ds_id).get('datasource_name')
 
             # Connection and Relation properties of data source xml
             connections = [c for c in root.iter('connection')]
@@ -96,7 +96,7 @@ def parse_tableau():
             # Update each output dictionaries with their respective parsed information
             parsed_data_source_dict[ds_id] = {
                 'datasource_id': ds_id,
-                'datasource_name': ds_name,
+                # 'datasource_name': ds_name,
                 'source_table_names_list': all_tables,
                 'source_field_names_list': all_columns
             }
@@ -105,8 +105,8 @@ def parse_tableau():
     # pp(parsed_data_source_dict)
     # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
 
-    # # Remove all data source xml files from temporary directory
-    # delete_tmp_files_of_type('xml', 'tmp')
+    # Remove all data source xml files from temporary directory
+    delete_tmp_files_of_type('xml', 'tmp')
 
     return parsed_data_source_dict
 
