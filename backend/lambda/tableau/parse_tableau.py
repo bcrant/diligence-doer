@@ -105,8 +105,8 @@ def parse_tableau():
     # pp(parsed_data_source_dict)
     # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
 
-    # Remove all data source xml files from temporary directory
-    delete_tmp_files_of_type('xml', 'tmp')
+    # # Remove all data source xml files from temporary directory
+    # delete_tmp_files_of_type('xml', 'tmp')
 
     return parsed_data_source_dict
 

@@ -1,3 +1,4 @@
+# import tableauserverclient as TSC
 from metadata_queries import MetadataQueries
 from utils.authentication import authenticate_tableau
 from utils.helpers import *
@@ -17,8 +18,15 @@ def get_metadata():
         # databases = SERVER.metadata.query(MetadataQueries.DATABASES)
         # pp(databases['data'])
 
-        database_tables = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES)
-        pp(database_tables['data'])
+        # database_tables = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES)
+        # pp(database_tables['data'])
+
+        # workbook_fields = TSC.Pager(SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS))
+        # workbook_fields = SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS)
+        # pp(workbook_fields)
+
+        tables_to_dashboards = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES_TO_DASHBOARDS)
+        pp(tables_to_dashboards['data'])
 
         # custom_sql = SERVER.metadata.query(MetadataQueries.CUSTOM_SQL_TABLES)
         # pp(custom_sql['data'])
