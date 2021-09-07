@@ -48,33 +48,40 @@ def parse_pipelines():
 
         for q in commands_dict.get(table):
             if str(sqlparse.parse(q)[0].token_first()) == 'INSERT':
-                #
-                # Table Names
-                #
-                table_names = [t for t in Parser(q).tables]
-                # log('table_names', table_names)
+                try:
+                    #
+                    # Table Names
+                    #
+                    table_names = [t for t in Parser(q).tables]
+                    # log('table_names', table_names)
 
-                table_aliases_dict = Parser(q).tables_aliases
-                # log('table_aliases_dict', table_aliases_dict)
+                    table_aliases_dict = Parser(q).tables_aliases
+                    # log('table_aliases_dict', table_aliases_dict)
 
-                #
-                # Column Names
-                #
-                columns = [c for c in Parser(q).columns]
-                # log('columns', columns)
+                    #
+                    # Column Names
+                    #
+                    columns = [c for c in Parser(q).columns]
+                    # log('columns', columns)
 
-                column_aliases_dict = Parser(q).columns_aliases
-                # log('column_aliases_dict', column_aliases_dict)
+                    column_aliases_dict = Parser(q).columns_aliases
+                    # log('column_aliases_dict', column_aliases_dict)
 
-                #
-                # Store Output
-                #
-                table_metadata_dict[table] = {
-                    'source_tables': table_names,
-                    'source_table_aliases': table_aliases_dict,
-                    'field_names': columns,
-                    'field_name_aliases': column_aliases_dict
-                }
+                    #
+                    # Store Output
+                    #
+                    table_metadata_dict[table] = {
+                        'source_tables': table_names,
+                        'source_table_aliases': table_aliases_dict,
+                        'field_names': columns,
+                        'field_name_aliases': column_aliases_dict
+                    }
+
+                except ValueError:
+                    continue
+
+                except KeyError:
+                    continue
 
     pp(table_metadata_dict)
 
