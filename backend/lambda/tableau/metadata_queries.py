@@ -172,14 +172,14 @@ class MetadataQueries:
 
     DATABASE_TABLES_TO_DASHBOARDS = '''
     query table_fields {
-        databaseTables (filter: {schema: "reporting_data"} ){
-            __typename
+        # databaseTables (filter: {connectionTypeWithin: ["hyper", "webdata-direct", "textscan"]}}) {
+        databaseTables {
             name
             fullName
-            luid
             # NOTE: Take schema value with a grain of salt. Give "name" and "fullName" precedence.
-            # if schema not in name use fullName with brackets removed 
+            # Added logic to get_tableau_metadata to handle. 
             schema
+            connectionType
                         
             columns {
                 name
@@ -188,33 +188,7 @@ class MetadataQueries:
             downstreamDashboards {
                 name
                 path
-                luid
             }
         }
     } 
     '''
-
-
-
-# '''
-# query table_columns {}
-# tables {
-#     columns {
-#         downstreamSheets {
-#             workbook {
-#                 name
-#             }
-#             containedInDashboards {
-#                 name
-#             }
-#             sheetFieldInstancesConnection {
-#                 nodes {
-#                     name
-#                 }
-#             }
-#             name
-#         }
-#     }
-# }
-#
-# '''
