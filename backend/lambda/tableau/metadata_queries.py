@@ -1,34 +1,34 @@
 class MetadataQueries:
 
     CUSTOM_SQL_TABLES = '''
-        query custom_sql_tables {
-            customSQLTablesConnection(first: 10){
-                nodes {               
+    query custom_sql_tables {
+        customSQLTablesConnection(first: 10){
+            nodes {               
+                name
+                id
+                query
+
+                database {
                     name
                     id
-                    query
-    
-                    database {
-                        name
-                        id
-                        luid
-                        connectionType
-                    }
-    
-                    tables {
-                        name
-                        id
-                        luid
-                        schema
-                    }
-    
-                    # columns {
-                    #     name
-                    # }
+                    luid
+                    connectionType
                 }
+
+                tables {
+                    name
+                    id
+                    luid
+                    schema
+                }
+
+                # columns {
+                #     name
+                # }
             }
-        }        
-        '''
+        }
+    }        
+    '''
 
     DATABASE_TABLES = '''
     query database_tables {
@@ -81,34 +81,36 @@ class MetadataQueries:
                         name
                     }
                     
-                    upstreamColumns {
-                        __typename
-                        name
-                        table {
-                            __typename
-                            name
-                        }
-                    }
-
-                    upstreamTables {
-                        __typename
-                        name
-                    }
-
-                    upstreamDatasources {
-                        __typename
-                        name                    
-                    }
-
+                    # upstreamColumns {
+                    #     __typename
+                    #     name
+                    #     table {
+                    #         __typename
+                    #         name
+                    #     }
+                    # }
+                    # 
+                    # upstreamTables {
+                    #     __typename
+                    #     name
+                    # }
+                    
                     datasource {
                         __typename
                         name
-                        
-                        downstreamDashboards {
-                            name
-                            path
-                            luid
-                        }
+                        id
+                        ... on EmbeddedDatasource {
+                            upstreamDatasources {
+                                __typename
+                                name
+                                id                    
+                            }                        
+                        }   
+                        # downstreamDashboards {
+                        #     name
+                        #     path
+                        #     luid
+                        # }
                     }
                 }
             }
@@ -133,12 +135,19 @@ class MetadataQueries:
     EMBEDDED_DATASOURCES = '''
     query embedded_datasources {
         embeddedDatasources {
+            __typename
             name
             id
+            
             # fields {
             #     name
             #     fullyQualifiedName
-            # }       
+            # }
+            
+            downstreamDashboards {
+                __typename
+                name
+            }       
         }
     }
     '''
