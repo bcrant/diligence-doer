@@ -82,23 +82,13 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
             table_dict.pop('name')
             table_dict['schema_name'] = table_dict.get('schema')
             table_dict.pop('schema')
-            table_dict['pk'] = table_dict.get('luid')
-            table_dict.pop('luid')
 
             # Move column names into list
-            cols = list()
             if table_dict.get('columns') is not None:
-                for col_dict in table_dict.get('columns'):
-                    col_name = col_dict.get('name')
-                    cols.append(col_name)
-                    # # TODO: Add support for columns. Structuring for Table names for now...
-                    # # Add all possible combos of schema, table, and column names for matching
-                    # cols.extend([
-                    #     col_name,
-                    #     str(table_dict.get('fullName') + '.' + col_name),
-                    #     str(table_dict.get('table_name') + '.' + col_name)
-                    # ])
-            table_dict['columns'] = cols
+                table_dict['columns'] = [
+                    col_dict.get('name').lower()
+                    for col_dict in table_dict.get('columns')
+                ]
 
             cleaned_dicts_list.append(table_dict)
 
@@ -141,20 +131,17 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
 
 
 def clean_published_datasources(published_datasources):
-    x = list()
+    cleaned_datasources_list = list()
     for ds in published_datasources:
         if ds.get('downstreamDashboards') is not None:
             fields = list(strip_brackets(f.get('fullyQualifiedName')).lower() for f in ds.get('fields'))
             tables = list(strip_brackets(t.get('fullName')).lower() for t in ds.get('upstreamTables'))
-            x.extend(tables)
-            # x.append({
-            #     'fields': fields,
-            #     'tables': tables
-            # })
+            cleaned_datasources_list.append({
+                'fields': fields,
+                'tables': tables
+            })
 
-    for i in set(x):
-        print(i)
-    return x
+    return cleaned_datasources_list
 
 
 if __name__ == "__main__":

@@ -35,7 +35,6 @@ class MetadataQueries:
     DATABASE_TABLES_TO_DASHBOARDS = '''
     query table_fields {
         databaseTables {
-            luid
             name
             fullName
             # NOTE: Take schema value with a grain of salt. Give "name" and "fullName" precedence.
