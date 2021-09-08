@@ -19,10 +19,27 @@ def get_metadata():
             .get('data')\
             .get('databaseTables')
 
-        clean_tables_to_dashboards(tables_to_dashboards)
+        cleaned_tables = clean_tables_to_dashboards(tables_to_dashboards)
+        mapped_tables = map_tables_to_dashboards(cleaned_tables)
 
-        # published_datasources = SERVER.metadata.query(MetadataQueries.PUBLISHED_DATASOURCES)
-        # pp(published_datasources['data'])
+        for table_dict in mapped_tables:
+            pp(table_dict)
+        #     write_to_dynamodb(
+        #         record=table_dict,
+        #         pk='pk'
+        #     )
+
+        # #
+        # # Published Datasources
+        # #
+        # published_datasources = SERVER.metadata\
+        #     .query(MetadataQueries.PUBLISHED_DATASOURCES)\
+        #     .get('data')\
+        #     .get('publishedDatasources')
+        #
+        # pp(published_datasources)
+        # cleaned_datasources = clean_published_datasources(published_datasources)
+        # pp(cleaned_datasources)
 
         # embedded_datasources = SERVER.metadata.query(MetadataQueries.EMBEDDED_DATASOURCES)
         # pp(embedded_datasources['data'])
@@ -40,7 +57,7 @@ def get_metadata():
         # workbook_fields = SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS)
         # pp(workbook_fields)
 
-        # custom_sql = SERVER.metadata.query(MetadataQueries.CUSTOM_SQL_TABLES)
+        # custom_sql = SERVER.metadata.query(MetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)
         # pp(custom_sql['data'])
 
 
@@ -54,7 +71,7 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
         if table_dict.get('connectionType') not in text_filters:
 
             # Strip brackets from table fullName's
-            table_dict['fullName'] = strip_brackets(table_dict.get('fullName'))
+            table_dict['fullName'] = strip_brackets(table_dict.get('fullName')).lower()
 
             # Smell test schema response
             if table_dict.get('schema') not in table_dict.get('fullName'):
@@ -74,7 +91,7 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
                 for col_dict in table_dict.get('columns'):
                     col_name = col_dict.get('name')
                     cols.append(col_name)
-                    # TODO: Add support for columns. Structuring for Table names for now...
+                    # # TODO: Add support for columns. Structuring for Table names for now...
                     # # Add all possible combos of schema, table, and column names for matching
                     # cols.extend([
                     #     col_name,
@@ -83,38 +100,61 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
                     # ])
             table_dict['columns'] = cols
 
-            # pp(table_dict)
-            # write_to_dynamodb(
-            #     record=table_dict,
-            #     pk='pk'
-            # )
-
             cleaned_dicts_list.append(table_dict)
 
-    table_to_dash = map_tables_to_dashboards(cleaned_dicts_list)
-    pp(table_to_dash)
-
-    return table_to_dash
+    return cleaned_dicts_list
 
 
 def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
-    map_dict = dict()
+    list_of_map_dicts = list()
     for clean_table in cleaned_tables_to_dashboard_list:
+
         if len(clean_table.get('downstreamDashboards')) >= 1:
             table_full_name = clean_table.get('fullName')
 
-            if map_dict.get(table_full_name) is not None:
-                for dash in clean_table.get('downstreamDashboards'):
-                    if dash.get('name') not in map_dict.get(table_full_name):
-                        map_dict.get(table_full_name).append(dash.get('name'))
+            map_dict = {
+                'pk': table_full_name,
+                'tableau': {
+                    'columns': clean_table.get('columns'),
+                    'dashboards': dict()
+                },
+                'github': dict()
+            }
 
-            else:
-                map_dict[table_full_name] = list()
-                for dash in clean_table.get('downstreamDashboards'):
-                    if dash.get('name') not in map_dict.get(table_full_name):
-                        map_dict.get(table_full_name).append(dash.get('name'))
+            dashboards = map_dict.get('tableau').get('dashboards')
+            for dash in clean_table.get('downstreamDashboards'):
+                if dashboards is not None:
+                    if dash.get('name') not in list(dashboards.keys()):
+                        dashboards[dash.get('name')] = str(
+                            'https://tableau_server_url.com/#/views/' + dash.get('path')
+                        )
+                else:
+                    dashboards = dict()
+                    if dash.get('name') not in list(dashboards.keys()):
+                        dashboards[dash.get('name')] = str(
+                            'https://tableau_server_url.com/#/views/' + dash.get('path')
+                        )
 
-    return map_dict
+            list_of_map_dicts.append(map_dict)
+
+    return list_of_map_dicts
+
+
+def clean_published_datasources(published_datasources):
+    x = list()
+    for ds in published_datasources:
+        if ds.get('downstreamDashboards') is not None:
+            fields = list(strip_brackets(f.get('fullyQualifiedName')).lower() for f in ds.get('fields'))
+            tables = list(strip_brackets(t.get('fullName')).lower() for t in ds.get('upstreamTables'))
+            x.extend(tables)
+            # x.append({
+            #     'fields': fields,
+            #     'tables': tables
+            # })
+
+    for i in set(x):
+        print(i)
+    return x
 
 
 if __name__ == "__main__":

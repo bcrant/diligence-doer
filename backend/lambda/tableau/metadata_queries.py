@@ -1,33 +1,58 @@
 class MetadataQueries:
 
-    CUSTOM_SQL_TABLES = '''
+    CUSTOM_SQL_TO_DASHBOARDS = '''
     query custom_sql_tables {
-        customSQLTablesConnection(first: 10){
+        customSQLTablesConnection(first: 50){
             nodes {               
-                name
-                id
-                query
-
+                # name
+                # query
+                
                 database {
                     name
-                    id
-                    luid
                     connectionType
                 }
 
                 tables {
                     name
-                    id
-                    luid
                     schema
                 }
 
-                # columns {
-                #     name
-                # }
+                columns {
+                    name
+                }
+
+                 
+                downstreamDashboards {
+                    __typename
+                    name
+                    path
+                }
             }
         }
     }        
+    '''
+
+    DATABASE_TABLES_TO_DASHBOARDS = '''
+    query table_fields {
+        databaseTables {
+            luid
+            name
+            fullName
+            # NOTE: Take schema value with a grain of salt. Give "name" and "fullName" precedence.
+            # Added logic to get_tableau_metadata to handle. 
+            schema
+            connectionType
+
+            columns {
+                name
+            }
+
+            downstreamDashboards {
+                name
+                path
+            }
+        }
+    } 
     '''
 
     DATABASE_TABLES = '''
@@ -71,46 +96,15 @@ class MetadataQueries:
                     name           
                     fullyQualifiedName
 
-                    ... on CalculatedField {
-                        __typename
-                        formula
-                    }
-
-                    ... on ColumnField {
-                        __typename
-                        name
-                    }
-                    
-                    # upstreamColumns {
-                    #     __typename
-                    #     name
-                    #     table {
-                    #         __typename
-                    #         name
-                    #     }
-                    # }
-                    # 
-                    # upstreamTables {
-                    #     __typename
-                    #     name
-                    # }
-                    
                     datasource {
                         __typename
                         name
-                        id
                         ... on EmbeddedDatasource {
                             upstreamDatasources {
                                 __typename
-                                name
-                                id                    
+                                name                    
                             }                        
                         }   
-                        # downstreamDashboards {
-                        #     name
-                        #     path
-                        #     luid
-                        # }
                     }
                 }
             }
@@ -122,12 +116,22 @@ class MetadataQueries:
     query published_datasources {
         publishedDatasources {
             name
-            luid
             uri
+            hasExtracts
+            
+            upstreamTables {
+                fullName
+            }
+
+            downstreamDashboards {
+                name
+            }
+
             fields {
                 name
                 fullyQualifiedName
             }       
+
         }
     }
     '''
@@ -135,9 +139,9 @@ class MetadataQueries:
     EMBEDDED_DATASOURCES = '''
     query embedded_datasources {
         embeddedDatasources {
-            __typename
+            # __typename
             name
-            id
+            # id
             
             # fields {
             #     name
@@ -145,7 +149,7 @@ class MetadataQueries:
             # }
             
             downstreamDashboards {
-                __typename
+                # __typename
                 name
             }       
         }
@@ -179,26 +183,3 @@ class MetadataQueries:
     }    
     '''
 
-    DATABASE_TABLES_TO_DASHBOARDS = '''
-    query table_fields {
-        # databaseTables (filter: {connectionTypeWithin: ["hyper", "webdata-direct", "textscan"]}}) {
-        databaseTables {
-            luid
-            name
-            fullName
-            # NOTE: Take schema value with a grain of salt. Give "name" and "fullName" precedence.
-            # Added logic to get_tableau_metadata to handle. 
-            schema
-            connectionType
-                        
-            columns {
-                name
-            }
-            
-            downstreamDashboards {
-                name
-                path
-            }
-        }
-    } 
-    '''
