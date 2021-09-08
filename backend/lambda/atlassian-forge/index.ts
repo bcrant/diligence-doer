@@ -1,3 +1,5 @@
 exports.handler = async (event: any) => {
-  return "Diligence Doer";
+  console.log(event);
+
+  return "success";
 };
