@@ -9,7 +9,7 @@ def get_repo_files():
     #
 
     # Authentication
-    headers, repo_info = authenticate_github()
+    headers, repo_variables = authenticate_github()
 
     # Parameters
     url = 'https://api.github.com/graphql'
@@ -35,10 +35,6 @@ def get_repo_files():
                 }
             }
         }
-        variables {
-            owner: ''' + repo_info.get('owner') + ''',
-            name: ''' + repo_info.get('name') + '''
-        }
     }
     '''
 
@@ -48,7 +44,7 @@ def get_repo_files():
     response = requests.post(
         url,
         headers=headers,
-        json={"query": query}
+        json={"query": query, "variables": repo_variables}
     ).json()
 
     pp(response)

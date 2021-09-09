@@ -30,14 +30,16 @@ def authenticate_github():
     # Github GraphQL API Authentication
     #
     GITHUB_PAT = os.getenv('GITHUB_PAT')
+    GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER')
+    GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
 
     headers = {
         'Authorization': str('token' + ' ' + GITHUB_PAT)
     }
 
     repo_info = {
-        'owner': 'bcrant',
-        'name': 'tableau2slack'
+        'owner': GITHUB_REPO_OWNER,
+        'name': GITHUB_REPO_NAME
     }
 
     return headers, repo_info
