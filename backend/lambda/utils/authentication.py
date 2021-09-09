@@ -33,6 +33,8 @@ def authenticate_github():
     GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER')
     GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
 
+    url = 'https://api.github.com'
+
     headers = {
         'Authorization': str('token' + ' ' + GITHUB_PAT)
     }
@@ -42,4 +44,4 @@ def authenticate_github():
         'name': GITHUB_REPO_NAME
     }
 
-    return headers, repo_info
+    return GITHUB_PAT, repo_info

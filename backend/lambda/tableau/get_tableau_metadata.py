@@ -1,8 +1,7 @@
-# import tableauserverclient as TSC
-from metadata_queries import MetadataQueries
 from utils.authentication import authenticate_tableau
 from utils.dynamodb import write_to_dynamodb
 from utils.helpers import *
+from utils.queries import TableauMetadataQueries
 
 
 def get_metadata():
@@ -15,7 +14,7 @@ def get_metadata():
         # DatabaseTables to Dashboards
         #
         tables_to_dashboards = SERVER.metadata\
-            .query(MetadataQueries.DATABASE_TABLES_TO_DASHBOARDS)\
+            .query(TableauMetadataQueries.DATABASE_TABLES_TO_DASHBOARDS)\
             .get('data')\
             .get('databaseTables')
 
@@ -33,7 +32,7 @@ def get_metadata():
         # # Published Datasources
         # #
         # published_datasources = SERVER.metadata\
-        #     .query(MetadataQueries.PUBLISHED_DATASOURCES)\
+        #     .query(TableauMetadataQueries.PUBLISHED_DATASOURCES)\
         #     .get('data')\
         #     .get('publishedDatasources')
         #
@@ -41,23 +40,23 @@ def get_metadata():
         # cleaned_datasources = clean_published_datasources(published_datasources)
         # pp(cleaned_datasources)
 
-        # embedded_datasources = SERVER.metadata.query(MetadataQueries.EMBEDDED_DATASOURCES)
+        # embedded_datasources = SERVER.metadata.query(TableauMetadataQueries.EMBEDDED_DATASOURCES)
         # pp(embedded_datasources['data'])
 
-        # workbooks = SERVER.metadata.query(MetadataQueries.WORKBOOKS)
+        # workbooks = SERVER.metadata.query(TableauMetadataQueries.WORKBOOKS)
         # pp(workbooks['data'])
 
-        # databases = SERVER.metadata.query(MetadataQueries.DATABASES)
+        # databases = SERVER.metadata.query(TableauMetadataQueries.DATABASES)
         # pp(databases['data'])
 
-        # database_tables = SERVER.metadata.query(MetadataQueries.DATABASE_TABLES)
+        # database_tables = SERVER.metadata.query(TableauMetadataQueries.DATABASE_TABLES)
         # pp(database_tables['data'])
 
-        # # workbook_fields = TSC.Pager(SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS))
-        # workbook_fields = SERVER.metadata.query(MetadataQueries.WORKBOOK_FIELDS)
+        # # workbook_fields = TSC.Pager(SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS))
+        # workbook_fields = SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS)
         # pp(workbook_fields)
 
-        # custom_sql = SERVER.metadata.query(MetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)
+        # custom_sql = SERVER.metadata.query(TableauMetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)
         # pp(custom_sql['data'])
 
 
