@@ -1,7 +1,7 @@
 import requests
 from utils.authentication import authenticate_github
 from utils.helpers import *
-from utils.queries import GithubQueries
+# from utils.queries import GithubQueries
 
 
 # class GithubQueries:
