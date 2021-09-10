@@ -1,56 +1,6 @@
 #
-# GraphQL Queries for Github API GraphQL endpoint and Tableau Metadata API
+# GraphQL Queries for Tableau Metadata API
 #
-
-class GithubQueries:
-    REPO_FILES_RECURSIVE = '''
-    query repoFiles($owner: String!, $name: String!) {
-        repository(owner: $owner, name: $name) {
-            __typename
-            name
-        }
-    }
-    
-    '''
-
-    REPO_FILES = '''
-    query repoFiles($owner: String!, $name: String!) {
-        repository(owner: $owner, name: $name) {
-            id
-            name
-            
-            object(expression: "HEAD:") {
-                ... on Tree {
-                    entries {
-                        name
-                        type
-                        mode
-                        oid
-                        extension
-                        
-                        # object {
-                        # ... on Blob {
-                        #     byteSize
-                        #     text
-                        #     isBinary
-                        #     }
-                        # }
-                    }
-                }
-            }
-        }
-    }
-    '''
-
-    NESTED_FILES = '''
-    query nestedFiles($git_obj: ID!) {
-        node(id: $git_obj) {
-            __typename
-            name
-        }    
-    }
-    '''
-
 
 class TableauMetadataQueries:
     CUSTOM_SQL_TO_DASHBOARDS = '''

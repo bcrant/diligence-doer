@@ -33,7 +33,7 @@ def download_workbooks(tableau_server, workbooks):
         # Download Packaged Tableau Workbook file (.twbx)
         zipped_wb_path = tableau_server.workbooks.download(
             workbook.id,
-            filepath='./tmp',
+            filepath='../tableau/tmp',
             include_extract=False
         )
 
@@ -41,7 +41,7 @@ def download_workbooks(tableau_server, workbooks):
         unzipped_wb_path = unzip_packaged_tableau_file(
             zipped_file=zipped_wb_path,
             output_file_type='twb',
-            output_dir='tmp',
+            output_dir='../tableau/tmp',
             obj_name=workbook.name
         )
 
@@ -52,7 +52,7 @@ def download_workbooks(tableau_server, workbooks):
         file_path_dict[workbook.id] = xml_path
 
     # Remove all .twbx from temporary directory
-    delete_tmp_files_of_type('twbx', 'tmp')
+    delete_tmp_files_of_type('twbx', '../tableau/tmp')
 
     return file_path_dict
 
