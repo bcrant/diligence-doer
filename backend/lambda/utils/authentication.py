@@ -40,7 +40,7 @@ def authenticate_github():
     GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
 
     # API Endpoint
-    url = 'https://api.github.com/'
+    url = None
 
     repo_path = str(GITHUB_REPO_OWNER + '/' + GITHUB_REPO_NAME)
 

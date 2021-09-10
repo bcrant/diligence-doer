@@ -7,7 +7,6 @@ from utils.helpers import table_name_fmt, pp
 
 
 def parse_pipelines():
-    # TODO: Download the files git repo and loop through directory
 
     #
     # Clean YAML file before loading

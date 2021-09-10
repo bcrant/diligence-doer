@@ -1,5 +1,6 @@
 import pprint
 from github import Github
+from parse_yml import read_bytestream_to_yml
 from utils.authentication import authenticate_github
 from utils.helpers import *
 
@@ -13,19 +14,23 @@ def get_repo():
     endpoint, token, repo_path = authenticate_github()
 
     # Get Repository and identify files containing SQL
-    github_repo = Github(base_url=endpoint, login_or_token=token).get_repo(repo_path)
+    if not endpoint:
+        github_repo = Github(login_or_token=token).get_repo(repo_path)
+    else:
+        github_repo = Github(base_url=endpoint, login_or_token=token).get_repo(repo_path)
     repo_files_list = get_files_recursively(github_repo)
     yml_files, sql_files = get_files_containing_sql(repo_files_list)
 
     # TODO: Either use the .decoded_contents or .download_url to parse files
+    read_bytestream_to_yml(yml_files)
 
-    return yml_files, sql_files
+    return
 
 
 def get_files_recursively(repo):
     print(f'Inspecting all files in Github repository: {repo.full_name}...')
 
-    repo_contents = repo.get_contents('')
+    repo_contents = repo.get_contents('')[6:10]
 
     repo_files_list = list()
 
@@ -34,9 +39,12 @@ def get_files_recursively(repo):
 
         # Pop files out of directories to iterate over all files in repo recursively
         if file_content.type == "dir":
+            print('{:32s} {}'.format('Found directory:', file_content.name))
+            print('Inspecting all files in directory...')
             repo_contents.extend(repo.get_contents(file_content.path))
 
         else:
+            print('{:32s} {}'.format('Found file:', file_content.name))
             repo_files_list.append(file_content)
 
     return repo_files_list
@@ -50,7 +58,8 @@ def get_files_containing_sql(repo_files):
     for repo_file in repo_files:
         # Find all files in repo containing SQL (Currently only supporting SQL and YML)
         split_name = repo_file.name.rsplit('.')
-        if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:
+        # if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:
+        if len(split_name) >= 2 and split_name[-1] == 'yml':
             if split_name[1] == 'sql':
                 sql_files_list.append(repo_file)
             elif split_name[1] == 'yml':
@@ -62,9 +71,8 @@ def get_files_containing_sql(repo_files):
             # print('File: {repo_file.name} is a system dotfile and will not be parsed for SQL.')
             continue
 
-    log('yml files', yml_files_list)
-    log('sql files', sql_files_list)
-
+    # log('yml files', yml_files_list)
+    # log('sql files', sql_files_list)
     return yml_files_list, sql_files_list
 
 

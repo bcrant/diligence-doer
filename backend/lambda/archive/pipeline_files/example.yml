@@ -7707,6 +7707,3 @@ steps:
     alter table reporting_data.a_table_evaluations_clean_staging rename to a_table_evaluations_clean;
     alter table reporting_data.a_table_evaluations_clean owner to datapipeline_app;
 
-    grant all on reporting_data.a_table_evaluations_clean to group admin_group;
-    grant select, insert, update, delete on reporting_data.a_table_evaluations_clean to group internalapps_rw;
-    grant select, insert, update, delete on reporting_data.a_table_evaluations_clean to group querywriters_selective_rw;

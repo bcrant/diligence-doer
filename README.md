@@ -8,6 +8,9 @@ Built for data teams that Do their Diligence.
 ----
 
 # Project To Do's:
+- [ ] Add support for parsing Spark SQL and DataFrames
+- [ ] Add support for matching individual fields 
+
 ### Brian To Do's:
 - [x] Write to DynamoDB from Python
 - [x] QA table and column parsing in Tableau 
@@ -37,25 +40,6 @@ Built for data teams that Do their Diligence.
 
 # Overview
 stuff and things
-
-# Use Case Specific Caveats
-Action may be required to customize this tool for your specific use case. In this section I will identify use cases which would require you to make code or configuration changes to this project, and point you towards the appropriate files in this repository to make those changes.
-1. Using an Enterprise Github account
-- You will need to change the url endpoint to access the API for GitHub Enterprise Server.
-- Edit the `authenticate_github()` function in the [authentication.py](backend/lambda/utils/authentication.py) file to point to your Enterprise Account.
-- The change you need to make is in the function's docstring.
-
-2. Identifying SQL commands in YML files
-- Not all data pipelines and orchestrators use YML and even more unlikely is that two use it in the same way. 
-- The functionality to look for SQL in YML files will be useful for others that use AWS Datapipeline or [Dataduct]("https://github.com/coursera/dataduct"), but may be noisy for others.
-
-If you **DO NOT** have YML files that contain SQL in your repo, you can change the following line in the `get_files_containing_sql()` function of the [get_repository.py](backend/lambda/github/get_repository.py) file.
-  - Change from: `if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:`
-  - Change to: `if len(split_name) >= 2 and split_name[1] == 'sql':>` 
-
-If you **DO** have YML files that contain SQL you want to parse but do not use Dataduct, you may need to specify the YML keys.
-  - For Dataduct, we parse all keys named `steps` that are of `step_type: sql_command`
-  - For everyone else, you may need to adjust the YML keys and their properties in the [parse_yml.py](backend/lambda/github/parse_yml.py) file.
 
 # Getting Started
 All instructions assume macOS and that you have [Homebrew](https://brew.sh/) and `git` installed and tries not to assume anything else. Let me know if I overlooked anything or if you run into any troubles getting set up using these instructions.
@@ -140,6 +124,37 @@ Stuff and things
 
 # Cloud Deployment
 View [SETUP.md](documentation/SETUP.md) documentation for an in depth walk through of the cloud deployment, hosted on all free tier AWS products.
+
+# Use Case Specific Caveats
+Action may be required to customize this tool for your specific use case. In this section I will identify use cases which would require you to make code or configuration changes to this project, and point you towards the appropriate files in this repository to make those changes. 
+
+### Using an Enterprise Github account
+
+You will need to change the url endpoint to access the API for GitHub Enterprise Server. Edit the `authenticate_github()` function in the [authentication.py](backend/lambda/utils/authentication.py) file to point to your Enterprise Account. The change you need to make is in the function's docstring.
+
+### Identifying SQL commands in YML files
+
+Not all data pipelines or orchestrators use YML and certainly not all of those that do use it in the same way. The functionality to look for SQL in YML files will be useful for others that use AWS Datapipeline or [Dataduct]("https://github.com/coursera/dataduct"), but may be noisy feature for those that do not.
+
+If you **DO NOT** have YML files that contain SQL in your repo... 
+You can disable this feature by changing the following line in the `get_files_containing_sql()` function of the [get_repository.py](backend/lambda/github/get_repository.py) file.
+  - Change from: `if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:`
+  - Change to: `if len(split_name) >= 2 and split_name[1] == 'sql':` 
+
+If you **DO** have YML files that contain SQL in your repo...
+- The YML parser is hardcoded to read the keys used by Dataduct. It parses all keys named `steps` that are of `step_type: sql_command`
+- If you want to parse your YML files but do not use Dataduct, you may need to adjust the YML keys and their properties to match your YML structure in the [parse_yml.py](backend/lambda/github/parse_yml.py) file. 
+ 
+### Handling environment variables in YML files
+The use of environment variables in YML files may introduce breaking characters (`%`, `{{`, `}}`) to the PyYaml parser. Instead of letting these fail silently, which would result in none of the YML file being parsed, we have provided two solutions for this case.
+
+If you **DO NOT** have YML files that contain environment variables pertinent to this project, such as schema, table, or field names, you can opt to exclude them altogether.
+- To remove lines containing breaking characters _______
+
+If you **DO** have YML files that contain environment variables pertinent to this project, such as schema, table, or field names, you can find and replace environment variables with their keys.
+- To find and replace environment variables with their keys, provide the path to the specific YML file in repository that contains the environment variables as key value pairs.
+- 
+
 
 
 # Contributing  
