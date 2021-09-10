@@ -12,19 +12,16 @@ Built for data teams that Do their Diligence.
 - [x] Write to DynamoDB from Python
 - [x] QA table and column parsing in Tableau 
 - [x] Fix Custom SQL parsing in Tableau
-- [ ] Get workbook to datasource relationship
+- [x] Get workbook to datasource relationship
 - [ ] [POSTPONED] Fix Initial SQL parsing in Tableau
-  - [ ] This is taking up too much time.
-  - [ ] Consider using approach from parse_pipelines...
-  - [ ] that begins by splitting the queries into statements.
-  - [ ] This way, even if a query only has one statement (like would be _expected_ for initial sql)...
-  - [ ] The query is split into a list and can be iterated over like one
-- [ ] Sort out data model for primary key in Dynamodb
-- [ ] Add support for Github
-  - [ ] Ingest repo
+- Consider using approach from parse_pipelines that begins by splitting the queries into statements. This way, even if a query only has one statement (like would be _expected_ for initial sql). The query is split into a list and can be iterated over like one.
+
+- [x] Sort out data model for primary key in Dynamodb
+- [x] Add support for Github
+  - [x] Ingest repo
     - Should mechanism be based around downloading a repo to disk...
     - ...or authenticating and traversing the repo with requests?
-  - [ ] Minimize repo
+  - [x] Minimize repo
     - Favor database friendly file types (`.sql`, `.yml`, `.py`, `.xml`)
     - Exclude other file types (binary, executables, images, audio, video, stylesheets)
   - [ ] Parse repo
@@ -41,11 +38,29 @@ Built for data teams that Do their Diligence.
 # Overview
 stuff and things
 
-# Quick Start
+# Use Case Specific Caveats
+Action may be required to customize this tool for your specific use case. In this section I will identify use cases which would require you to make code or configuration changes to this project, and point you towards the appropriate files in this repository to make those changes.
+1. Using an Enterprise Github account
+- You will need to change the url endpoint to access the API for GitHub Enterprise Server.
+- Edit the `authenticate_github()` function in the [authentication.py](backend/lambda/utils/authentication.py) file to point to your Enterprise Account.
+- The change you need to make is in the function's docstring.
+
+2. Identifying SQL commands in YML files
+- Not all data pipelines and orchestrators use YML and even more unlikely is that two use it in the same way. 
+- The functionality to look for SQL in YML files will be useful for others that use AWS Datapipeline or [Dataduct]("https://github.com/coursera/dataduct"), but may be noisy for others.
+
+If you **DO NOT** have YML files that contain SQL in your repo, you can change the following line in the `get_files_containing_sql()` function of the [get_repository.py](backend/lambda/github/get_repository.py) file.
+  - Change from: `if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:`
+  - Change to: `if len(split_name) >= 2 and split_name[1] == 'sql':>` 
+
+If you **DO** have YML files that contain SQL you want to parse but do not use Dataduct, you may need to specify the YML keys.
+  - For Dataduct, we parse all keys named `steps` that are of `step_type: sql_command`
+  - For everyone else, you may need to adjust the YML keys and their properties in the [parse_yml.py](backend/lambda/github/parse_yml.py) file.
+
+# Getting Started
 All instructions assume macOS and that you have [Homebrew](https://brew.sh/) and `git` installed and tries not to assume anything else. Let me know if I overlooked anything or if you run into any troubles getting set up using these instructions.
 
-The below steps create an isolated Python environment to quickly test the program from your command line. 
-
+# Setup
 ### 1. Clone Repository
 - `$ git clone https://github.com/bcrant/diligence-doer.git`
 
@@ -136,8 +151,8 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 
 # Authors 
-- Brian Crant &emsp;|&emsp; < brian@briancrant.com > &emsp;|&emsp; [LinkedIn](https://www.linkedin.com/in/briancrant/)
-- John McDonald &emsp;|&emsp; email &emsp;|&emsp; LinkedIn  
+- Brian Crant &emsp;|&emsp; [LinkedIn](https://www.linkedin.com/in/briancrant/)
+- John McDonald &emsp;|&emsp; LinkedIn  
 
 <br><br>
 <figure>

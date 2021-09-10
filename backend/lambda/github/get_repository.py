@@ -10,11 +10,10 @@ def get_repo():
     #
 
     # Authentication
-    PAT, repo_variables = authenticate_github()
-    repo_path = str(repo_variables.get('owner') + '/' + repo_variables.get('name'))
+    endpoint, token, repo_path = authenticate_github()
 
     # Get Repository and identify files containing SQL
-    github_repo = Github(PAT).get_repo(repo_path)
+    github_repo = Github(base_url=endpoint, login_or_token=token).get_repo(repo_path)
     repo_files_list = get_files_recursively(github_repo)
     yml_files, sql_files = get_files_containing_sql(repo_files_list)
 
