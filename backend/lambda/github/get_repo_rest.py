@@ -14,14 +14,62 @@ def get_repo():
     repo_path = str(repo_variables.get('owner') + '/' + repo_variables.get('name'))
 
     # Get Repository and identify files containing SQL
-    repo = Github(PAT).get_repo(repo_path)
-    contents = repo.get_contents('')[0:10]
-    files_containing_sql = get_files_containing_sql(contents)
+    github_repo = Github(PAT).get_repo(repo_path)
+    repo_files_list = get_files_recursively(github_repo)
+    yml_files, sql_files = get_files_containing_sql(repo_files_list)
 
-    return files_containing_sql
+    # TODO: Either use the .decoded_contents or .download_url to parse files
+
+    return yml_files, sql_files
 
 
-def check_file_extension(file_name):
+def get_files_recursively(repo):
+    print(f'Inspecting all files in Github repository: {repo.full_name}...')
+
+    repo_contents = repo.get_contents('')
+
+    repo_files_list = list()
+
+    while repo_contents:
+        file_content = repo_contents.pop(0)
+
+        # Pop files out of directories to iterate over all files in repo recursively
+        if file_content.type == "dir":
+            repo_contents.extend(repo.get_contents(file_content.path))
+
+        else:
+            repo_files_list.append(file_content)
+
+    return repo_files_list
+
+
+def get_files_containing_sql(repo_files):
+    print(f'Collecting all files containing SQL...')
+    sql_files_list = list()
+    yml_files_list = list()
+
+    for repo_file in repo_files:
+        # Find all files in repo containing SQL (Currently only supporting SQL and YML)
+        split_name = repo_file.name.rsplit('.')
+        if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:
+            if split_name[1] == 'sql':
+                sql_files_list.append(repo_file)
+            elif split_name[1] == 'yml':
+                yml_files_list.append(repo_file)
+            else:
+                # print(f'File: {repo_file.name} does not contain SQL.')
+                continue
+        else:
+            # print('File: {repo_file.name} is a system dotfile and will not be parsed for SQL.')
+            continue
+
+    log('yml files', yml_files_list)
+    log('sql files', sql_files_list)
+
+    return yml_files_list, sql_files_list
+
+
+def get_file_extension(file_name):
     split_name = file_name.rsplit('.')
 
     if len(split_name) >= 2 and split_name[1] in ['sql', 'yml']:
@@ -32,23 +80,7 @@ def check_file_extension(file_name):
         return False
 
 
-def get_files_containing_sql(repo_contents):
-    files_containing_sql_list = list()
-
-    while repo_contents:
-        file_content = repo_contents.pop(0)
-        if file_content.type == "dir":
-            repo_contents.extend(repo.get_contents(file_content.path))
-        elif check_file_extension(file_content.name):
-            files_containing_sql_list.append(file_content)
-        else:
-            # print('File does not contain SQL.')
-            continue
-
-    print('Collected all files in repo containing SQL...')
-    pprint.pprint(files_containing_sql_list)
-
-    return files_containing_sql_list
+# def map_extension_to_file(file, extension):
 
 
 if __name__ == "__main__":
