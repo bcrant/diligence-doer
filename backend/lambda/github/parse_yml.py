@@ -1,4 +1,5 @@
 import io
+import pprint
 import yaml
 from utils.helpers import *
 
@@ -24,6 +25,67 @@ def parse_yml(all_yml_files_list):
     # commands_dict = {}
     # with open(file, 'r') as stream:
     #     steps_dict = yaml.safe_load(stream)['steps']
+
+
+def read_bytestream_to_yml(yml_files_list, replace_dict=None):
+
+    print('{:10s} {} {:10s}'.format('Found', len(yml_files_list), '.yml files'))
+
+    problem_files_list = list()
+    parsed_files_list = list()
+
+    for yml_file in yml_files_list:
+        print('\n\n')
+        try:
+            # print('{} {:64}'.format('Loading object to pyYaml for parsing... ', yml_file.path))
+            lint_yml = lint_yml_for_parser(yml_file.decoded_content)
+            print('linted...', type(lint_yml))
+
+            clean_yml = replace_yml_env_vars(lint_yml, replace_dict)
+            print('cleaned...', type(clean_yml))
+
+            # print('{} {:64}'.format('Loading object to pyYaml for parsing... ', yml_file.path))
+            read_yml_file = yaml.safe_load(
+                stream=clean_yml
+            )
+            print('parsed into yml...')
+            pp(list(read_yml_file.keys()))
+
+            pop_layer = denormalize_json(read_yml_file)
+            print('denormalized into yml...')
+            pp(list(pop_layer.keys()))
+
+            # log('read_yml_file', read_yml_file)
+
+            # if 'steps' not in read_yml_file.keys():
+            #     pass
+            # else:
+            # print('{} {:64}'.format('Object safely loaded file to pyYaml... ', yml_file.path))
+            parsed_files_list.append(read_yml_file)
+
+        except yaml.MarkedYAMLError as exc:
+            print("Error while parsing YAML file: {:64}".format(yml_file.path))
+            problem_files_list.append(yml_file)
+
+            if hasattr(exc, 'problem_mark'):
+                if not exc.context:
+                    print('  parser says\n', str(exc.problem_mark), '\n  ',
+                          str(exc.problem), ' ', str(exc.context), '\nPlease correct data and retry.')
+                else:
+                    print('  parser says\n', str(exc.problem_mark), '\n  ',
+                          str(exc.problem), '\nPlease correct data and retry.')
+            else:
+                print("Something went wrong while parsing yaml file")
+
+    print('Successfully parsed {} .yml files.'.format((len(yml_files_list) - len(problem_files_list))))
+
+    if len(problem_files_list) >= 1:
+        print('Unable to parse the following files: ')
+        for problem_file in problem_files_list:
+            print('{:64} {}'.format(problem_file.name, problem_file.path))
+
+    # return parsed_files_list
+    return
 
 
 def get_env_vars_dict(repo_files, env_file_path):
@@ -67,76 +129,14 @@ def denormalize_json(nested_dict):
 
 
 def lint_yml_for_parser(yml_bytestream):
-    cleaned_bytes = io.BytesIO()
+    linted_bytes = io.BytesIO()
     lines = io.BytesIO(yml_bytestream).readlines()
     for line in lines:
         # Remove lines with breaking yml (%)
         if b'%' not in line:
-            cleaned_bytes.write(line)
+            linted_bytes.write(line)
 
-    return cleaned_bytes.getvalue()
-
-
-def read_bytestream_to_yml(yml_files_list, replace_dict=None):
-
-    print('{:10s} {} {:10s}'.format('Found', len(yml_files_list), '.yml files'))
-
-    problem_files_list = list()
-    parsed_files_list = list()
-
-    for yml_file in yml_files_list:
-
-        try:
-            print('{} {:64}'.format('Loading object to pyYaml for parsing... ', yml_file.path))
-            lint_yml = lint_yml_for_parser(yml_file.decoded_content)
-            clean_yml = replace_yml_env_vars(lint_yml, replace_dict)
-
-            read_yml_file = yaml.safe_load(
-                stream=clean_yml
-            )
-
-            if 'steps' not in read_yml_file.keys():
-                pass
-            else:
-                print('{} {:64}'.format('Object safely loaded file to pyYaml... ', yml_file.path))
-                parsed_files_list.append(read_yml_file)
-
-        except yaml.MarkedYAMLError as exc:
-            print("Error while parsing YAML file: {:64}".format(yml_file.path))
-            problem_files_list.append(yml_file)
-
-            if hasattr(exc, 'problem_mark'):
-                if not exc.context:
-                    print('  parser says\n', str(exc.problem_mark), '\n  ',
-                          str(exc.problem), ' ', str(exc.context), '\nPlease correct data and retry.')
-                else:
-                    print('  parser says\n', str(exc.problem_mark), '\n  ',
-                          str(exc.problem), '\nPlease correct data and retry.')
-            else:
-                print("Something went wrong while parsing yaml file")
-
-    print('\n\n')
-    print('Successfully parsed {} .yml files.'.format((len(yml_files_list) - len(problem_files_list))))
-
-    if len(problem_files_list) >= 1:
-        print('Unable to parse the following files: ')
-        for problem_file in problem_files_list:
-            print('{:64} {}'.format(problem_file.name, problem_file.path))
-
-    return parsed_files_list
-
-
-# def assert_sql_in_yml(yml_files_to_test):
-#     print('Verifying YML file contains SQL..')
-#     verified_yml_files = list()
-#
-#     for f in yml_files_to_test[0:10]:
-#         f_yml = read_bytestream_to_yml(f)
-#         print(f_yml)
-#
-#         verified_yml_files.append(f_yml)
-#
-#     return verified_yml_files
+    return linted_bytes.getvalue()
 
 
 def replace_yml_env_vars(yml_file, schema_names_dict):
@@ -148,20 +148,28 @@ def replace_yml_env_vars(yml_file, schema_names_dict):
         if b'{{' not in line:
             cleaned_bytes.write(line)
         else:
+            log('line', line)
             line_str = line.decode('UTF-8')
+            log('line_str', line_str)
             env_var = line_str\
                 .split('{{')[1]\
                 .rsplit('}}')[0]
             if env_var.strip() in schema_names_dict.keys():
                 replaced_line = line_str.replace(
-                    '{{' + env_var + '}}',
+                    str('{{' + env_var + '}}'),
                     str(schema_names_dict.get(env_var.strip()))
                 )
+                log('replaced_line', replaced_line)
                 cleaned_bytes.write(replaced_line)
             else:
-                stripped_line = line_str\
-                    .replace('}}', '')\
-                    .replace('{{', '')
+                print('ELSE...')
+                log('line', line)
+                log('line', str(line))
+                stripped_line = line\
+                    .replace(b'}}', b'')\
+                    .replace(b'{{', b'')\
+                    .strip(b' ')
+                log('stripped_line', stripped_line)
                 cleaned_bytes.write(stripped_line)
 
-    return cleaned_bytes
+    return cleaned_bytes.getvalue()
