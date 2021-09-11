@@ -3,6 +3,7 @@ import ForgeUI, {
   Badge,
   Link,
   Fragment,
+  SectionMessage,
   Text,
   IssuePanel,
   useState,
@@ -22,11 +23,8 @@ const getReferences = async (fields) => {
   return data;
 };
 
-const Section = ({ field, section, emoji }) => (
+const Section = ({ section, emoji }) => (
   <Fragment>
-    <Text>
-      <Badge text={field} appearance="default" />
-    </Text>
     {Object.entries(section).map(([key, value]) => (
       <Tooltip text={value}>
         <Text>
@@ -40,22 +38,20 @@ const Section = ({ field, section, emoji }) => (
 );
 
 const Reference = ({ ref }) => {
+  const isReferenced = ref.tableau?.dashboards || ref.github?.files;
   return (
-    <Fragment>
-      {!ref.tableau?.dashboards && !ref.github?.files && (
-        <Text>No Tableau or GitHub references found</Text>
-      )}
+    <SectionMessage
+      appearance={isReferenced ? "error" : "confirmation"}
+      title={ref.field}
+    >
+      {!isReferenced && <Text>No Tableau or GitHub references found</Text>}
       {!!ref.tableau?.dashboards && (
-        <Section
-          field={ref.field}
-          section={ref.tableau.dashboards}
-          emoji="📈  "
-        />
+        <Section section={ref.tableau.dashboards} emoji="📈  " />
       )}
       {!!ref.github?.files && (
-        <Section field={ref.field} section={ref.github.files} emoji="📄  " />
+        <Section section={ref.github.files} emoji="📄  " />
       )}
-    </Fragment>
+    </SectionMessage>
   );
 };
 
