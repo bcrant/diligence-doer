@@ -14,7 +14,6 @@ export class DiligenceDoerStack extends cdk.Stack {
     const datastore = new dynamodb.Table(this, "datastore", {
       tableName: "diligence-doer",
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
-      // sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
 
@@ -59,7 +58,7 @@ export class DiligenceDoerStack extends cdk.Stack {
 
     const atlassianForgeFn = new NodejsFunction(this, "atlassian-forge-fn", {
       functionName: "diligence-doer-atlassian-forge",
-      entry: "../lambda/atlassian-forge/index.ts",
+      entry: "./lambda/atlassian-forge/index.ts",
     });
 
     datastore.grantReadWriteData(atlassianForgeFn);
@@ -83,11 +82,9 @@ export class DiligenceDoerStack extends cdk.Stack {
 
     const usagePlan = api.addUsagePlan("api-key-usage-plan", {
       name: "diligence-doer-api-usage-plan",
-      throttle: {
-        rateLimit: 3,
-      },
     });
 
     usagePlan.addApiKey(apiKey);
+    usagePlan.addApiStage({ stage: api.deploymentStage });
   }
 }
