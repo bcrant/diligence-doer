@@ -4,6 +4,10 @@ permissions:
   scopes:
     - "read:jira-work"
     - "write:jira-work"
+  external:
+    fetch:
+      backend:
+        - "vyhlzywcs8.execute-api.us-east-1.amazonaws.com/prod/forge"
 modules:
   jira:issuePanel:
     - key: diligence-doer-jira-issues-panel
