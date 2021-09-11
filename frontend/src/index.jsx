@@ -94,9 +94,9 @@ const App = () => {
   return (
     <Fragment>
       <Text>
-        Issue contains{" "}
+        Issue may contain{" "}
         <StatusLozenge appearance="removed" text="database table(s)" /> used by
-        the following resources:
+        the other resources:
       </Text>
       {references.map((ref) => (
         <Reference ref={ref} />
