@@ -25,7 +25,7 @@ def get_repo():
 
     # TODO: Either use the .decoded_contents or .download_url to parse files
     # read_bytestream_to_yml(yml_files)
-    parse_yml(yml_files[0:60])
+    parse_yml(yml_files)
 
     return
 
