@@ -27,8 +27,7 @@ def write_to_dynamodb(record, pk, sk):
 
     """
 
-    session = boto3.Session(profile_name='bc')
-    dynamodb = session.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(name='diligence-doer')
     # log('key_schema', table.key_schema)
 
