@@ -11,17 +11,19 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@aws-cdk/assert": "1.120.0",
-    "@aws-cdk/aws-apigateway": "^1.120.0",
-    "@aws-cdk/aws-dynamodb": "^1.120.0",
-    "@aws-cdk/aws-events": "^1.120.0",
-    "@aws-cdk/aws-events-targets": "^1.120.0",
-    "@aws-cdk/aws-lambda": "^1.120.0",
-    "@aws-cdk/aws-lambda-nodejs": "^1.120.0",
-    "@aws-cdk/aws-lambda-python": "^1.120.0",
+    "@aws-cdk/assert": "1.121.0",
+    "@aws-cdk/aws-apigateway": "^1.121.0",
+    "@aws-cdk/aws-dynamodb": "^1.121.0",
+    "@aws-cdk/aws-events": "^1.121.0",
+    "@aws-cdk/aws-events-targets": "^1.121.0",
+    "@aws-cdk/aws-lambda": "^1.121.0",
+    "@aws-cdk/aws-lambda-nodejs": "^1.121.0",
+    "@aws-cdk/aws-lambda-python": "^1.121.0",
+    "@types/aws-lambda": "^8.10.83",
     "@types/jest": "^26.0.10",
     "@types/node": "10.17.27",
-    "aws-cdk": "1.120.0",
+    "aws-cdk": "1.121.0",
+    "aws-sdk": "^2.984.0",
     "dotenv": "^10.0.0",
     "jest": "^26.4.2",
     "ts-jest": "^26.2.0",
@@ -29,7 +31,7 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "@aws-cdk/core": "1.120.0",
+    "@aws-cdk/core": "1.121.0",
     "source-map-support": "^0.5.16"
   }
 }

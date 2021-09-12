@@ -1,0 +1,19 @@
+app:
+  id: ari:cloud:ecosystem::app/005d29c6-9f45-4831-b25a-514669b01b6e
+permissions:
+  scopes:
+    - "read:jira-work"
+    - "write:jira-work"
+  external:
+    fetch:
+      backend:
+        - "vyhlzywcs8.execute-api.us-east-1.amazonaws.com/prod/forge"
+modules:
+  jira:issuePanel:
+    - key: diligence-doer-jira-issues-panel
+      function: main
+      title: Due Diligence
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  function:
+    - key: main
+      handler: index.run

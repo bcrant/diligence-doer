@@ -14,7 +14,6 @@ export class DiligenceDoerStack extends cdk.Stack {
     const datastore = new dynamodb.Table(this, "datastore", {
       tableName: "diligence-doer",
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
-      // sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
 
@@ -26,9 +25,9 @@ export class DiligenceDoerStack extends cdk.Stack {
       runtime: lambda.Runtime.PYTHON_3_8,
       timeout: cdk.Duration.seconds(60), // can update this to anything under 15 minutes
       environment: {
-        TABLEAU_SERVER_URL: process.env.TABLEAU_SERVER_URL,
-        TABLEAU_PAT_NAME: process.env.TABLEAU_PAT_NAME,
-        TABLEAU_PAT: process.env.TABLEAU_PAT
+        TABLEAU_SERVER_URL: process.env.TABLEAU_SERVER_URL as string,
+        TABLEAU_PAT_NAME: process.env.TABLEAU_PAT_NAME as string,
+        TABLEAU_PAT: process.env.TABLEAU_PAT as string,
       },
     });
 
@@ -57,13 +56,12 @@ export class DiligenceDoerStack extends cdk.Stack {
     cronJob.addTarget(new eventTargets.LambdaFunction(tableauFn));
     cronJob.addTarget(new eventTargets.LambdaFunction(githubFn));
 
-//     const atlassianForgeFn = new NodejsFunction(this, "atlassian-forge-fn", {
-//       handler: "handler",
-//       functionName: "diligence-doer-atlassian-forge",
-//       entry: "./lambda/atlassian-forge/index.ts",
-//     });
-//
-//     datastore.grantReadWriteData(atlassianForgeFn);
+    const atlassianForgeFn = new NodejsFunction(this, "atlassian-forge-fn", {
+      functionName: "diligence-doer-atlassian-forge",
+      entry: "./lambda/atlassian-forge/index.ts",
+    });
+
+    datastore.grantReadWriteData(atlassianForgeFn);
 
     const api = new apigateway.RestApi(this, "diligence-doer-api", {
       restApiName: "diligence-doer-api",
@@ -72,19 +70,9 @@ export class DiligenceDoerStack extends cdk.Stack {
       },
     });
 
-    const atlassian = api.root.addResource("atlassian");
-    const issues = atlassian.addResource("issues");
-    const issue = issues.addResource("{issue_id}");
+    const forge = api.root.addResource("forge");
 
-    issues.addMethod(
-      "POST",
-      new apigateway.LambdaIntegration(tableauFn),
-      {
-        apiKeyRequired: true,
-      }
-    );
-
-    issue.addMethod("GET", new apigateway.LambdaIntegration(tableauFn), {
+    forge.addMethod("GET", new apigateway.LambdaIntegration(atlassianForgeFn), {
       apiKeyRequired: true,
     });
 
@@ -94,11 +82,9 @@ export class DiligenceDoerStack extends cdk.Stack {
 
     const usagePlan = api.addUsagePlan("api-key-usage-plan", {
       name: "diligence-doer-api-usage-plan",
-      throttle: {
-        rateLimit: 1,
-      },
     });
 
     usagePlan.addApiKey(apiKey);
+    usagePlan.addApiStage({ stage: api.deploymentStage });
   }
 }
