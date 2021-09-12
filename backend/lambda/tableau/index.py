@@ -1,2 +1,10 @@
+from get_tableau_metadata import get_metadata
+
+
 def handler(event):
-    return "Diligence Doer"
+    """
+    Query the Tableau Metadata API
+    """
+    get_metadata()
+
+    return
