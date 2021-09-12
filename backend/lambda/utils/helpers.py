@@ -1,6 +1,7 @@
 import json
 import os
 import zipfile
+from collections import defaultdict
 from pathlib import Path
 
 
@@ -18,6 +19,31 @@ def table_name_fmt(name):
 
 def strip_brackets(field_name):
     return field_name.replace('[', '').replace(']', '')
+
+
+def denormalize_json(nested_dict):
+    flat_dict = {}
+    nested_dicts = {}
+    for key in nested_dict.keys():
+        if type(nested_dict.get(key)) != dict:
+            flat_dict[key] = nested_dict.get(key)
+        else:
+            for nested_key in nested_dict.get(key).keys():
+                nested_dicts[key + '.' + nested_key] = nested_dict.get(key).get(nested_key)
+
+    return {**nested_dicts, **flat_dict}
+
+
+def invert_dict_key_values(input_dict):
+
+    out_dict = defaultdict(list)
+    for file, tables in input_dict.items():
+        for table in tables:
+            out_dict[table].append(file)
+
+    # pp(out_dict)
+
+    return out_dict
 
 
 def convert_tableau_file_to_xml(file_path):

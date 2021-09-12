@@ -106,7 +106,7 @@ def parse_tableau():
     # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
 
     # Remove all data source xml files from temporary directory
-    delete_tmp_files_of_type('xml', 'tmp')
+    delete_tmp_files_of_type('xml', '../tableau/tmp')
 
     return parsed_data_source_dict
 
@@ -123,7 +123,7 @@ def download_data_sources(tableau_server, datasources):
             # Download Packaged Tableau Datasource file (.tdsx)
             zipped_ds_path = tableau_server.datasources.download(
                 datasource.id,
-                filepath='./tmp',
+                filepath='../tableau/tmp',
                 include_extract=False
             )
 
@@ -131,7 +131,7 @@ def download_data_sources(tableau_server, datasources):
             unzipped_ds_path = unzip_packaged_tableau_file(
                 zipped_file=zipped_ds_path,
                 output_file_type='tds',
-                output_dir='tmp',
+                output_dir='../tableau/tmp',
                 obj_name=datasource.name
             )
 
@@ -142,7 +142,7 @@ def download_data_sources(tableau_server, datasources):
             file_path_dict[datasource.id] = xml_path
 
     # Remove all .tdsx from temporary directory
-    delete_tmp_files_of_type('tdsx', 'tmp')
+    delete_tmp_files_of_type('tdsx', '../tableau/tmp')
 
     return file_path_dict
 

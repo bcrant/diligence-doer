@@ -1,0 +1,54 @@
+default_schema_names: &default_schema_names
+  HOMEROOM_SCHEMA: homeroom_data
+  SPECTRUM_SCHEMA: spectrum_schema
+  ODS_SCHEMA: ods
+  REPORTING_SCHEMA: reporting_data
+  REPORTING_RT_SCHEMA: reporting_data_rt
+  ADMINIFI_SCHEMA: adminifi_data
+  NEXT_SCHEMA: next_data
+  SFDC_SCHEMA: sfdc_stitch
+  ENGAGE_SCHEMA: engage_data
+  ODS_STATIC_SCHEMA: ods_static_data
+  EVALUFI_SCHEMA: evalufi_data
+  CONTENT_SERVICE_SCHEMA: content_service_data
+  NOTIFI_SCHEMA: notifi_data
+  LAWROOM_SCHEMA: lexcom_data
+  METRICS_SCHEMA: metrics_data
+  REFERENCE_SCHEMA: reference_data
+  CAMPUSCLARITY_SCHEMA: campusclarity_data
+  CONTENT_SERVICE_RT_SCHEMA: content_service_data_rt
+  ADMINIFI_RT_SCHEMA: adminifi_data_rt
+  RLS_SCHEMA: rls_data
+
+root: &default
+  <<: *default_schema_names
+  SPECTRUM_IAM_ROLE: arn:aws:iam::537461397591:role/RedshiftSpectrumS3Access
+  S3_UNLOAD_IAM_ROLE: arn:aws:iam::537461397591:role/S3RedshiftUnloadRole
+  REDSHIFT_KMS_KEY_ID: 7f1f130c-41cd-417a-ad8c-c24efd5dd683 ### datafi-redshift. i.e. staging
+  SNOWFLAKE_STAGE: '@public.s3_staging_stage'
+  SNOWFLAKE_S3_INTEGRATION: EVERFI_DATAFI_STAGING_S3_INTEGRATION
+  EVENTS_BUCKET: foundry-events-staging
+  SNOWFLAKE_EVENTS_STAGE: '@public.foundry_events_staging'
+  SEEDING_CONSTANT: "'-99999'"
+  MESSAGES_FIELD_DATA_CUTOVER_DATE: "'2020-07-04'"
+  EVALUATION_ACTIVITY_PROGRESS_CUTOVER_DATE: "'2020-06-01'" # Part of the epic DP-4335.
+  EVENTS_PROGRESS_ID_CUTOVER_DATE: "'2020-09-22'"
+  CONSTANTS:
+    INTERNAL_IP_ADDRESSES: "'50.204.136.34','199.119.119.50','50.234.128.10','74.202.6.42','73.72.66.129'"
+    SOURCE_SYSTEM:
+      ADMINIFI_ID: 1
+      ENGAGE_ID: 2
+      ATWORK_ID: 3
+      HOMEROOM_ID: 4
+      NOTIFI_ID: 8
+      EVALUFI_ID: 9
+      CONTENT_SERVICE_ID: 10
+    SUB_SOURCE_SYSTEM:
+      FINANCIAL_ED_ID: 1
+      HIGHER_ED_ID: 2
+  REDSHIFT_ENABLE: True
+  SNOWFLAKE_ENABLE: False
+  IS_SNOWFLAKE: False
+  SNOWFLAKE_EXTRACT_DB_REF: extract
+  SNOWFLAKE_TRANSFORM_DB_REF: transform
+

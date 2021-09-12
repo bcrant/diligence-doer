@@ -6,7 +6,7 @@ load_dotenv()
 
 def authenticate_tableau():
     #
-    # AUTHENTICATION
+    # Tableau Authentication
     #
     TOKEN_NAME = os.getenv('TABLEAU_PAT_NAME')
     TOKEN = os.getenv('TABLEAU_PAT')
@@ -23,3 +23,53 @@ def authenticate_tableau():
     )
 
     return auth, server
+
+
+def authenticate_github():
+    """
+    #
+    # Github REST API Authentication
+    #
+
+    NOTE: For Github Enterprise with custom hostname, use this url instead:
+    url = 'https://{hostname}/api/v3'
+    """
+
+    GITHUB_PAT = os.getenv('GITHUB_PAT')
+    GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER')
+    GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
+
+    # API Endpoint
+    url = None
+
+    repo_path = str(GITHUB_REPO_OWNER + '/' + GITHUB_REPO_NAME)
+
+    return url, GITHUB_PAT, repo_path
+
+
+def authenticate_github_graphql():
+    """
+    #
+    # Github GraphQL API Authentication
+    #
+    NOTE: For Github Enterprise with custom hostname, use this url instead:
+    url = 'https://{hostname}/api/v3/graphql'
+
+    See: https://docs.github.com/en/graphql/guides/managing-enterprise-accounts
+    """
+    GITHUB_PAT = os.getenv('GITHUB_PAT')
+    GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER')
+    GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
+
+    url = 'https://api.github.com/graphql'
+
+    headers = {
+        'Authorization': str('token' + ' ' + GITHUB_PAT)
+    }
+
+    repo_info = {
+        'owner': GITHUB_REPO_OWNER,
+        'name': GITHUB_REPO_NAME
+    }
+
+    return url, headers, repo_info
