@@ -29,14 +29,6 @@ def write_to_dynamodb(record, pk, sk):
 
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(name='diligence-doer')
-    # log('key_schema', table.key_schema)
-
-    # sk_not_to_update = None
-    # if sk == 'github':
-    #     sk_not_to_update = 'tableau'
-    # elif sk == 'tableau':
-    #     sk_not_to_update = 'github'
-    # else:
 
     if sk not in ('tableau', 'github'):
         print(f'[ INPUT ERROR ] "sk" parameter invalid. Expecting "tableau" or "github"')
