@@ -22,11 +22,12 @@ def get_metadata():
         mapped_tables = map_tables_to_dashboards(cleaned_tables)
 
         for table_dict in mapped_tables:
-            pp(table_dict)
-        #     write_to_dynamodb(
-        #         record=table_dict,
-        #         pk='pk'
-        #     )
+            # pp(table_dict)
+            write_to_dynamodb(
+                record=table_dict,
+                pk='pk',
+                sk='tableau'
+            )
 
 
 def clean_tables_to_dashboards(tables_to_dashboards_dict):
@@ -75,8 +76,7 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
                 'tableau': {
                     'columns': clean_table.get('columns'),
                     'dashboards': dict()
-                },
-                'github': dict()
+                }
             }
 
             dashboards = map_dict.get('tableau').get('dashboards')

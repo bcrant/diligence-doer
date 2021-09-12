@@ -1,14 +1,15 @@
 import boto3
-from helpers import log
+from utils.helpers import pp
 
 
-def write_to_dynamodb(record, pk):
+def write_to_dynamodb(record, pk, sk):
     """
     Write to DynamoDB
 
     Args:
         record (dict): A Python Dictionary containing at minimum 'pk' key and value and no keys with Null values.
         pk (str): The field name of the Primary Key value in record
+        sk (str): "github" or "tableau"
     Returns:
         None
 
@@ -31,13 +32,30 @@ def write_to_dynamodb(record, pk):
     table = dynamodb.Table(name='diligence-doer')
     # log('key_schema', table.key_schema)
 
+    # sk_not_to_update = None
+    # if sk == 'github':
+    #     sk_not_to_update = 'tableau'
+    # elif sk == 'tableau':
+    #     sk_not_to_update = 'github'
+    # else:
+
+    if sk not in ('tableau', 'github'):
+        print(f'[ INPUT ERROR ] "sk" parameter invalid. Expecting "tableau" or "github"')
+
     # Validate input is Python Dictionary
     if isinstance(record, dict):
         if bool(record.get(pk)):
-            response = table.put_item(
-                Item=record
+
+            response = table.update_item(
+                Key={pk: record.get(pk)},
+                UpdateExpression=f'SET {sk} = :{sk}',
+                ExpressionAttributeValues={
+                    f':{sk}': record.get(sk),
+                },
+                ReturnValues='ALL_NEW'
             )
-            return print(response)
+
+            return pp(response.get('Attributes'))
         else:
             print(f'[ VALUE ERROR ] Input given to write_to_dynamodb missing Partition Key.'
                   'Missing Partition Key is defined in lib/diligence-doer-stack.ts as: "pk"')
