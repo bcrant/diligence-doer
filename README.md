@@ -7,39 +7,22 @@ Built for data teams that Do their Diligence.
 
 ----
 
-# Project To Do's:
-- [ ] Add support for parsing Spark SQL and DataFrames
-- [ ] Add support for matching individual fields 
-
-### Brian To Do's:
-- [x] Write to DynamoDB from Python
-- [x] QA table and column parsing in Tableau 
-- [x] Fix Custom SQL parsing in Tableau
-- [x] Get workbook to datasource relationship
-- [ ] [POSTPONED] Fix Initial SQL parsing in Tableau
-- Consider using approach from parse_pipelines that begins by splitting the queries into statements. This way, even if a query only has one statement (like would be _expected_ for initial sql). The query is split into a list and can be iterated over like one.
-
-- [x] Sort out data model for primary key in Dynamodb
-- [x] Add support for Github
-  - [x] Ingest repo
-    - Should mechanism be based around downloading a repo to disk...
-    - ...or authenticating and traversing the repo with requests?
-  - [x] Minimize repo
-    - Favor database friendly file types (`.sql`, `.yml`, `.py`, `.xml`)
-    - Exclude other file types (binary, executables, images, audio, video, stylesheets)
-  - [ ] Parse repo
-
-
-### John To Do's:
-- [x] Be awesome
-- [x] Look like a young George Clooney 
-- [x] Set up cloud resources (AWS CDK)
-- [ ] Stuff and things
-
-----
-
 # Overview
-stuff and things
+**Diligence Doer** is an [Atlassian Forge](https://developer.atlassian.com/platform/forge/) app for Jira. It works by parsing the summary of a Jira Issue for database tables or columns, then displays the other resources where those database tables or fields are being used. 
+
+Currently, those resources can come from two places: Github and Tableau.
+
+**Github**
+- Given a Github Repository and authentication token, Diligence Doer will return the name and link to the file(s) that contain the database table(s) in the summary of the Jira Issue. 
+- In the app, these files are marked with the :page_facing_up: emoji.    
+  
+**Tableau**
+- Given a Tableau Server and authentication token, Diligence Doer will return the name and link to the dashboard(s) whose datasources contain the database table(s) or field(s) in the summary of the Jira Issue. 
+- In the app, these dashboards are marked with the :chart_with_upwards_trend: emoji.
+
+The information displayed by Diligence Doer can be seen directly in a Jira Issue underneath the description:
+![Issue](./images/in-)
+
 
 # Getting Started
 All instructions assume macOS and that you have [Homebrew](https://brew.sh/) and `git` installed and tries not to assume anything else. Let me know if I overlooked anything or if you run into any troubles getting set up using these instructions.
@@ -148,14 +131,35 @@ If you **DO** have YML files that contain SQL in your repo...
 ### Handling environment variables in YML files
 The use of environment variables in YML files may introduce breaking characters (`%`, `{{`, `}}`) to the PyYaml parser. Instead of letting these fail silently, which would result in none of the YML file being parsed, we have provided two solutions for this case.
 
-If you **DO NOT** have YML files that contain environment variables pertinent to this project, such as schema, table, or field names, you can opt to exclude them altogether.
-- To remove lines containing breaking characters _______
+If you **DO NOT** have YML files that contain environment variables pertinent to this project, such as schema, table, or field names, you can opt to exclude this altogether.
+- To prevent the parser from finding and replacing environment variables, simply pass an empty string `''` as the `env_var_file_path` in the `parse_yml()` function found in the [parse_yml.py](backend/lambda/github/parse_yml.py) file.
+- Alternatively, in the `read_bytestream_to_yml()` function in the same file, you could comment out the line 
+```replace_yml_env_vars(linted_yml_file, replace_dict)``` 
+and change the input of the `yaml.safe_load()` function to `stream=linted_yml_file`
 
 If you **DO** have YML files that contain environment variables pertinent to this project, such as schema, table, or field names, you can find and replace environment variables with their keys.
-- To find and replace environment variables with their keys, provide the path to the specific YML file in repository that contains the environment variables as key value pairs.
-- 
+- To find and replace environment variables with their keys, provide the path to the specific YML file in repository that contains the environment variables as key value pairs in the function mentioned above.
 
 
+----
+
+# Project To Do's:
+- [ ] Add support for parsing Spark SQL and DataFrames
+- [ ] Add support for other code repository hosts (BitBucket, Gitlab) and BI Tools (Looker, Power BI)
+  - [ ] Add support for matching individual fields 
+    - [x] Ingest and parse fields from Github and Tableau
+    - [ ] Determine best way to shape the data for this use case
+    - [ ] Determine best way to identify a field name separate from database table in a Jira Issue Summary
+      - For instance, consider the issue summary: `"Combine address1 and address2 fields in ods.customers"`
+      - If we add databases as a source (Snowflake, Redshift, BigQuery), we could then check each word in the summary against the actual schema for the database table:
+      ```
+      "ods.customers.Combine"
+      "ods.customers.address1"
+      "ods.customers.and"
+      "ods.customers.address2"
+      "ods.customers.fields"
+      "ods.customers.in"
+      ``` 
 
 # Contributing  
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.  
