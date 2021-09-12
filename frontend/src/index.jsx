@@ -94,7 +94,7 @@ const App = () => {
   return (
     <Fragment>
       <Text>
-        Issue may contain{" "}
+        Issue contains{" "}
         <StatusLozenge appearance="removed" text="database table(s)" /> used by
         the other resources:
       </Text>
