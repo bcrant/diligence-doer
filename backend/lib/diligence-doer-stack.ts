@@ -42,6 +42,9 @@ export class DiligenceDoerStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60), // can update this to anything under 15 minutes
       environment: {
         // key/value pairs to inject as env vars into lambda fn
+        GITHUB_PAT: process.env.GITHUB_PAT as string,
+        GITHUB_REPO_OWNER: process.env.GITHUB_REPO_OWNER as string,
+        GITHUB_REPO_NAME: process.env.GITHUB_REPO_NAME as string,
       },
     });
 

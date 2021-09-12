@@ -6,7 +6,7 @@ from sql_metadata import Parser
 from utils.helpers import *
 
 
-def parse_yml(all_yml_files_list):
+def parse_yml(all_yml_files_list, file_to_url_dict):
     print('Parsing YML files in repository...')
 
     # Clean YAML file before loading
@@ -17,40 +17,15 @@ def parse_yml(all_yml_files_list):
     parsed_yml_dict = read_bytestream_to_yml(all_yml_files_list, replace_dict=env_file)
 
     # Get unique table appearances in each source file
-    table_to_repo_file_dict = invert_dict_key_values(
-        get_unique_tables_per_file(parsed_yml_dict)
+    table_to_file_dict = map_file_to_url(
+        get_unique_tables_per_file(parsed_yml_dict),
+        file_to_url_dict
     )
 
-    return table_to_repo_file_dict
-
-
-def get_unique_tables_per_file(parsed_files):
-    print('\n\n')
-    print('Getting unique table references in file...')
-    unique_tables_per_file = dict()
-
-    for file, contents in parsed_files.items():
-        unique_tables_list = list()
-        for tables in list(v.get('source_tables') for k, v in parsed_files.get(file).items()):
-            for table in tables:
-                if '.' in table:
-                    cleaned_table = table\
-                        .replace('_tmp', '')\
-                        .replace('_temp', '')\
-                        .replace('_staging', '')
-
-                    if cleaned_table not in unique_tables_list:
-                        unique_tables_list.append(cleaned_table)
-
-        unique_tables_per_file[file] = unique_tables_list
-
-    # pp(unique_tables_per_file)
-
-    return unique_tables_per_file
+    return table_to_file_dict
 
 
 def read_bytestream_to_yml(yml_files_list, replace_dict=None):
-
     print('{:10s} {} {:10s}'.format('Found', len(yml_files_list), '.yml files'))
 
     problem_files_list = list()
@@ -96,7 +71,8 @@ def read_bytestream_to_yml(yml_files_list, replace_dict=None):
                 #
                 # Output
                 #
-                parsed_files_dict[yml_file.html_url] = parsed_output
+
+                parsed_files_dict[yml_file.path] = parsed_output
 
             else:
                 print('{:64s} {}'.format('No "steps" for SQL found in YML file...', yml_file.path))
@@ -239,7 +215,7 @@ def parse_tables_and_fields_from_sql(commands_dict):
     # Parse each table's SQL/DDL/DML for table and column information
     table_metadata_dict = {}
     for table in sorted(commands_dict.keys()):
-        print('Identifying source tables and field names for...', table.upper())
+        print('{:64s} {}'.format('Identifying source tables and field names for...', table.upper()))
 
         for q in commands_dict.get(table):
             if str(sqlparse.parse(q)[0].token_first()) == 'INSERT':
@@ -292,3 +268,39 @@ def parse_tables_and_fields_from_sql(commands_dict):
                     continue
 
     return table_metadata_dict
+
+
+def map_file_to_url(input_dict, file_to_url):
+
+    # Invert dict key values and enrich file info
+    out_dict = defaultdict(dict)
+    for file, tables in input_dict.items():
+        for table in tables:
+            out_dict[table].update({
+                file: file_to_url.get(file)
+            })
+
+    return out_dict
+
+
+def get_unique_tables_per_file(parsed_files):
+    print('\n\n')
+    print('Getting unique table references in file...')
+    unique_tables_per_file = dict()
+
+    for file, contents in parsed_files.items():
+        unique_tables_list = list()
+        for tables in list(v.get('source_tables') for k, v in parsed_files.get(file).items()):
+            for table in tables:
+                if '.' in table:
+                    cleaned_table = table\
+                        .replace('_tmp', '')\
+                        .replace('_temp', '')\
+                        .replace('_staging', '')
+
+                    if cleaned_table.lower() not in unique_tables_list:
+                        unique_tables_list.append(cleaned_table.lower())
+
+        unique_tables_per_file[file] = unique_tables_list
+
+    return unique_tables_per_file

@@ -31,3 +31,4 @@ tmp/*
 # ignore YAML files
 ./backend/lambda/archive/pipeline_files
 *.yaml
+/backend/lambda/archive/
