@@ -1,28 +1,52 @@
 import io
-import pprint
+import sqlparse
 import yaml
+from sqlparse import exceptions
+from sql_metadata import Parser
 from utils.helpers import *
 
 
 def parse_yml(all_yml_files_list):
     print('Parsing YML files in repository...')
 
-    #
     # Clean YAML file before loading
-    #
-    # Get environment variable key value pairs
     env_var_file_path = 'pipelines/example_template_config.yml'
     env_file = get_env_vars_dict(all_yml_files_list, env_var_file_path)
 
-    # TODO: Add step to eliminate YML files with no Dataduct Steps
-    read_bytestream_to_yml(all_yml_files_list, replace_dict=env_file)
+    # Identify and parse YML files containing SQL
+    parsed_yml_dict = read_bytestream_to_yml(all_yml_files_list, replace_dict=env_file)
 
-    # replace_yml_env_vars(file, env_dict)
-    #
-    # # Parse YML for each table's SQL/DDL/DML
-    # commands_dict = {}
-    # with open(file, 'r') as stream:
-    #     steps_dict = yaml.safe_load(stream)['steps']
+    # Get unique table appearances in each source file
+    table_to_repo_file_dict = invert_dict_key_values(
+        get_unique_tables_per_file(parsed_yml_dict)
+    )
+
+    return table_to_repo_file_dict
+
+
+def get_unique_tables_per_file(parsed_files):
+    print('\n\n')
+    print('Getting unique table references in file...')
+    unique_tables_per_file = dict()
+
+    for file, contents in parsed_files.items():
+        unique_tables_list = list()
+        for tables in list(v.get('source_tables') for k, v in parsed_files.get(file).items()):
+            for table in tables:
+                if '.' in table:
+                    cleaned_table = table\
+                        .replace('_tmp', '')\
+                        .replace('_temp', '')\
+                        .replace('_staging', '')
+
+                    if cleaned_table not in unique_tables_list:
+                        unique_tables_list.append(cleaned_table)
+
+        unique_tables_per_file[file] = unique_tables_list
+
+    # pp(unique_tables_per_file)
+
+    return unique_tables_per_file
 
 
 def read_bytestream_to_yml(yml_files_list, replace_dict=None):
@@ -30,46 +54,58 @@ def read_bytestream_to_yml(yml_files_list, replace_dict=None):
     print('{:10s} {} {:10s}'.format('Found', len(yml_files_list), '.yml files'))
 
     problem_files_list = list()
-    parsed_files_list = list()
+    parsed_files_dict = dict()
 
     for yml_file in yml_files_list:
         try:
-            # Get bytestream
+            #
+            # Processing YML file
+            #
             yml_bytestream = io.BytesIO(yml_file.decoded_content)
 
             if bool(verify_sql_steps_in_yml(yml_bytestream)):
-
-                print('\n\n')
-                print('{:64s} {}'.format('Preprocessing YML file... ', yml_file.path))
-
+                print()
+                print('{:64s} {}'.format('Found SQL in YML file...', yml_file.path))
+                print('{:64s} {}'.format('Preprocessing YML file for parsing...', yml_file.path))
                 linted_yml_file = lint_yml_for_parser(yml_bytestream)
-                print('linted_yml_file', type(linted_yml_file), linted_yml_file[0:100])
-
                 cleaned_yml_file = replace_yml_env_vars(linted_yml_file, replace_dict)
-                print('cleaned_yml_file', type(cleaned_yml_file), cleaned_yml_file[0:100])
-
-                # for line in io.BytesIO(cleaned_yml_file).readlines():
-                #     print(line)
 
                 print('{:64s} {}'.format('Loading YML file for parsing... ', yml_file.path))
                 read_yml_file = yaml.safe_load(
                     stream=cleaned_yml_file
                 )
 
-                # print('parsed into yml...')
-                # pp(list(read_yml_file.keys()))
                 #
-                # pop_layer = denormalize_json(read_yml_file)
-                # print('denormalized into yml...')
-                # pp(list(pop_layer.keys()))
+                # Parsing SQL from YML files
+                #
+                print('{:64s} {}'.format('Done loading. Getting "steps" of type "sql-command"... ', yml_file.path))
+                file_steps_dicts = dict()
+                for step in read_yml_file.get('steps'):
+                    if bool(step.get('command')) and step.get('step_type') == 'sql-command':
+                        # Trim excess YML clauses before passing object
+                        for key in list(step.keys()):
+                            if key not in ('name', 'command'):
+                                step.pop(key)
 
-                # log('read_yml_file', read_yml_file)
+                        # Restructure steps into name-command key-value pairs and parse command for sql
+                        file_steps_dicts[table_name_fmt(step.get('name'))] = parse_sql_from_command(step.get('command'))
 
-                print('{} {:64}'.format('Object safely loaded file to pyYaml... ', yml_file.path))
-                parsed_files_list.append(read_yml_file)
+                # Parse tables and fields from restructured steps
+                parsed_output = parse_tables_and_fields_from_sql(file_steps_dicts)
+
+                #
+                # Output
+                #
+                parsed_files_dict[yml_file.html_url] = parsed_output
+
+            else:
+                print('{:64s} {}'.format('No "steps" for SQL found in YML file...', yml_file.path))
 
         except yaml.MarkedYAMLError as exc:
-            print("Error while parsing YAML file: {:64}".format(yml_file.path))
+            #
+            # Whole bunch of YML error marshaling for finicky parsing library
+            #
+            print("Error while parsing YAML file: {:64s}".format(yml_file.path))
             problem_files_list.append(yml_file)
 
             if hasattr(exc, 'problem_mark'):
@@ -80,14 +116,17 @@ def read_bytestream_to_yml(yml_files_list, replace_dict=None):
                     print('  parser says\n', str(exc.problem_mark), '\n  ',
                           str(exc.problem), '\nPlease correct data and retry.')
             else:
-                print("Something went wrong while parsing yaml file")
+                print("Something went wrong while parsing YML file")
 
-    print('Successfully parsed all {} .yml files.'.format(len(parsed_files_list)))
+    print('\n\n')
+    print('Successfully parsed __{}__ YML files containing SQL.'.format(len(parsed_files_dict)))
 
     if len(problem_files_list) >= 1:
         print('Unable to parse the following files: ')
         for problem_file in problem_files_list:
             print('{:64} {}'.format(problem_file.name, problem_file.path))
+
+    return parsed_files_dict
 
 
 def get_env_vars_dict(repo_files, env_file_path):
@@ -121,30 +160,14 @@ def get_env_vars_dict(repo_files, env_file_path):
         return {'env_vars': 'none'}
 
 
-def denormalize_json(nested_dict):
-    flat_dict = {}
-    nested_dicts = {}
-    if nested_dict:
-        for key in nested_dict.keys():
-            if type(nested_dict.get(key)) != dict:
-                flat_dict[key] = nested_dict.get(key)
-            else:
-                for nested_key in nested_dict.get(key).keys():
-                    nested_dicts[key + '.' + nested_key] = nested_dict.get(key).get(nested_key)
-
-    return {**nested_dicts, **flat_dict}
-
-
 def verify_sql_steps_in_yml(repo_yml_file):
     top_match = b'steps:\n'
     inner_match = b'- step_type: sql-command\n'
 
     if top_match and inner_match in repo_yml_file.getvalue():
-        print('Found SQL in YML file...')
         split_yml = top_match + repo_yml_file.getvalue().split(top_match)[1]
         return split_yml
     else:
-        print('No Steps for SQL Commands found in YML file. Skipping...')
         return False
 
 
@@ -178,12 +201,13 @@ def replace_yml_env_vars(yml_file, schema_names_dict):
                 .rsplit('}}')[0]
             # log('env_var', env_var)
             if env_var.strip() not in schema_names_dict.keys():
-                stripped_line = line_str\
-                    .replace('}}', '')\
-                    .replace('{{', '')\
-                    .replace(env_var, str(env_var.replace(' ', '')))
-                # log('stripped_line', stripped_line)
-                cleaned_bytes.write(stripped_line.encode(encoding='UTF-8'))
+                if 'depends' not in env_var.strip():
+                    stripped_line = line_str\
+                        .replace('}}', '')\
+                        .replace('{{', '')\
+                        .replace(env_var, str(env_var.replace(' ', '')))
+                    # log('stripped_line', stripped_line)
+                    cleaned_bytes.write(stripped_line.encode(encoding='UTF-8'))
             else:
                 replaced_line = line_str.replace(
                     str('{{' + env_var + '}}'),
@@ -193,3 +217,78 @@ def replace_yml_env_vars(yml_file, schema_names_dict):
                 cleaned_bytes.write(replaced_line.encode(encoding='UTF-8'))
 
     return cleaned_bytes.getvalue()
+
+
+def parse_sql_from_command(command):
+    # Format SQL
+    formatted_statement = sqlparse.format(
+        command,
+        reindent=True,
+        strip_comments=True,
+        keyword_case='upper',
+        comma_first=True
+    )
+
+    # Split SQL by statement (a phrase ending in a semicolon)
+    split_statement = sqlparse.split(formatted_statement)
+
+    return split_statement
+
+
+def parse_tables_and_fields_from_sql(commands_dict):
+    # Parse each table's SQL/DDL/DML for table and column information
+    table_metadata_dict = {}
+    for table in sorted(commands_dict.keys()):
+        print('Identifying source tables and field names for...', table.upper())
+
+        for q in commands_dict.get(table):
+            if str(sqlparse.parse(q)[0].token_first()) == 'INSERT':
+                try:
+                    #
+                    # Table Names
+                    #
+                    table_names = [t for t in Parser(q).tables]
+                    # log('table_names', table_names)
+
+                    #
+                    # Field Names
+                    #
+                    fields = [c for c in Parser(q).columns]
+                    # log('columns', columns)
+
+                    #
+                    # Table and Field Aliases (excluding for now)
+                    #
+                    # table_aliases_dict = Parser(q).tables_aliases
+                    # log('table_aliases_dict', table_aliases_dict)
+                    #
+                    # field_aliases_dict = Parser(q).columns_aliases
+                    # log('column_aliases_dict', column_aliases_dict)
+
+                    #
+                    # Store Output
+                    #
+                    table_metadata_dict[table] = {
+                        'source_tables': table_names,
+                        'field_names': fields
+                        # 'source_table_aliases': table_aliases_dict,
+                        # 'field_name_aliases': field_aliases_dict
+                    }
+
+                except ValueError as v_err:
+                    print(f'[SQL PARSE] ValueError: {v_err}')
+                    continue
+
+                except KeyError as k_err:
+                    print(f'[SQL PARSE] KeyError: {k_err}')
+                    continue
+
+                except AttributeError as a_err:
+                    print(f'[SQL PARSE] AttributeError: {a_err}')
+                    continue
+
+                except sqlparse.exceptions as sql_err:
+                    print(f'[SQL PARSE] SQL PARSE Exception: {sql_err}')
+                    continue
+
+    return table_metadata_dict

@@ -28,37 +28,6 @@ def get_metadata():
         #         pk='pk'
         #     )
 
-        # #
-        # # Published Datasources
-        # #
-        # published_datasources = SERVER.metadata\
-        #     .query(TableauMetadataQueries.PUBLISHED_DATASOURCES)\
-        #     .get('data')\
-        #     .get('publishedDatasources')
-        #
-        # pp(published_datasources)
-        # cleaned_datasources = clean_published_datasources(published_datasources)
-        # pp(cleaned_datasources)
-
-        # embedded_datasources = SERVER.metadata.query(TableauMetadataQueries.EMBEDDED_DATASOURCES)
-        # pp(embedded_datasources['data'])
-
-        # workbooks = SERVER.metadata.query(TableauMetadataQueries.WORKBOOKS)
-        # pp(workbooks['data'])
-
-        # databases = SERVER.metadata.query(TableauMetadataQueries.DATABASES)
-        # pp(databases['data'])
-
-        # database_tables = SERVER.metadata.query(TableauMetadataQueries.DATABASE_TABLES)
-        # pp(database_tables['data'])
-
-        # # workbook_fields = TSC.Pager(SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS))
-        # workbook_fields = SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS)
-        # pp(workbook_fields)
-
-        # custom_sql = SERVER.metadata.query(TableauMetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)
-        # pp(custom_sql['data'])
-
 
 def clean_tables_to_dashboards(tables_to_dashboards_dict):
     # Clean keys and values to make matching easier
@@ -141,6 +110,37 @@ def clean_published_datasources(published_datasources):
             })
 
     return cleaned_datasources_list
+
+
+def unused_queries():
+    print()
+    # published_datasources = SERVER.metadata\
+    #     .query(TableauMetadataQueries.PUBLISHED_DATASOURCES)\
+    #     .get('data')\
+    #     .get('publishedDatasources')
+    # pp(published_datasources)
+
+    # cleaned_datasources = clean_published_datasources(published_datasources)
+    # pp(cleaned_datasources)
+
+    # embedded_datasources = SERVER.metadata.query(TableauMetadataQueries.EMBEDDED_DATASOURCES)
+    # pp(embedded_datasources['data'])
+
+    # workbooks = SERVER.metadata.query(TableauMetadataQueries.WORKBOOKS)
+    # pp(workbooks['data'])
+
+    # databases = SERVER.metadata.query(TableauMetadataQueries.DATABASES)
+    # pp(databases['data'])
+
+    # database_tables = SERVER.metadata.query(TableauMetadataQueries.DATABASE_TABLES)
+    # pp(database_tables['data'])
+
+    # # workbook_fields = TSC.Pager(SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS))
+    # workbook_fields = SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS)
+    # pp(workbook_fields)
+
+    # custom_sql = SERVER.metadata.query(TableauMetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)
+    # pp(custom_sql['data'])
 
 
 if __name__ == "__main__":

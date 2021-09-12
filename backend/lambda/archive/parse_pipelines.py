@@ -95,19 +95,6 @@ def get_schema_names_dict(config_file):
     return flattened_schema_names
 
 
-def denormalize_json(nested_dict):
-    flat_dict = {}
-    nested_dicts = {}
-    for key in nested_dict.keys():
-        if type(nested_dict.get(key)) != dict:
-            flat_dict[key] = nested_dict.get(key)
-        else:
-            for nested_key in nested_dict.get(key).keys():
-                nested_dicts[key + '.' + nested_key] = nested_dict.get(key).get(nested_key)
-
-    return {**nested_dicts, **flat_dict}
-
-
 def lint_yml_for_parser(file_path):
     with open(file_path, 'r') as f_in:
         lines = f_in.readlines()

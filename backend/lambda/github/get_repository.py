@@ -23,8 +23,6 @@ def get_repo():
     repo_files_list = get_files_recursively(github_repo)
     yml_files, sql_files = get_files_containing_sql(repo_files_list)
 
-    # TODO: Either use the .decoded_contents or .download_url to parse files
-    # read_bytestream_to_yml(yml_files)
     parse_yml(yml_files)
 
     return
@@ -32,7 +30,6 @@ def get_repo():
 
 def get_files_recursively(repo):
     print(f'Inspecting all files in Github repository: {repo.full_name}...')
-
     repo_contents = repo.get_contents('')
 
     repo_files_list = list()
@@ -42,12 +39,12 @@ def get_files_recursively(repo):
 
         # Pop files out of directories to iterate over all files in repo recursively
         if file_content.type == "dir":
-            # print('{:32s} {}'.format('Found directory:', file_content.name))
-            # print('Inspecting all files in directory...')
+            print('{:32s} {}'.format('Found directory:', file_content.name))
+            print('Inspecting all files in directory...')
             repo_contents.extend(repo.get_contents(file_content.path))
 
         else:
-            # print('{:32s} {}'.format('Found file:', file_content.name))
+            print('{:32s} {}'.format('Found file:', file_content.name))
             repo_files_list.append(file_content)
 
     return repo_files_list
