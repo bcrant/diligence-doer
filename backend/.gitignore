@@ -31,3 +31,6 @@ tmp/*
 # ignore YAML files
 ./backend/lambda/tableau/pipeline_files/**
 *.yaml
+
+# ignore Archive
+archive
