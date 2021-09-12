@@ -138,12 +138,22 @@ with your credentials
 ----
 
 # Deploying the Project
-stuff and things
+When making changes to the Jira app's [manifest.yml](../frontend/manifest.yml) file, you will need to redeploy and reinstall the app to Jira...  
+`$ forge deploy`  
+`$ forge install --upgrade`  
 
+When making changes to the UI of the app as it appears in Jira, which would be done in [index.jsx](../frontend/src/index.jsx) file, you only need to redeploy to Jira...  
+`$ forge deploy`
+
+When making changes to AWS Lambda functions, such as any changes to the files in the [backend/lambda](../backend/lambda) directory, you will need to redeploy for remote execution...  
+`$ cdk deploy --profile {YOUR_AWS_PROFILE}`
+  
 ____
 
 # Troubleshooting
-stuff and things
+See the `Use Case Specific Caveats` section in the [README.md](../README.md) file for the majority of troubleshooting issues.
+
+Beyond those caveats, make sure that you set your environment variables as outlined here and at that they are available to the AWS Lambda execution environment. 
 
 ____
 \

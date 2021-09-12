@@ -20,70 +20,34 @@ Currently, those resources can come from two places: Github and Tableau.
 - Given a Tableau Server and authentication token, Diligence Doer will return the name and link to the dashboard(s) whose datasources contain the database table(s) or field(s) in the summary of the Jira Issue. 
 - In the app, these dashboards are marked with the :chart_with_upwards_trend: emoji.
 
+
+----
+
+
 # Usage
 
-The information displayed by Diligence Doer can be seen directly in a Jira Issue underneath the description...
+> The information displayed by Diligence Doer can be seen directly in a Jira Issue underneath the description...
+
 ![In Sprint](documentation/images/in-sprint.png)
 
-and in other places an Issue may exist, like the Backlog...
+> and in other places an Issue may exist, like the Backlog...
+
 ![In Backlog](documentation/images/in-backlog.png)
 
-If the database table referenced in the ticket _is not_ referenced in any other resources, Diligence Doer lets you know that, too!
+> If the database table referenced in the ticket _is not_ referenced in any other resources, Diligence Doer lets you know that, too!
+
 ![No References](documentation/images/no-references.png)
 
 
+----
+
 
 # Getting Started
-All instructions assume macOS and that you have [Homebrew](https://brew.sh/) and `git` installed and tries not to assume anything else. Let me know if I overlooked anything or if you run into any troubles getting set up using these instructions.
+### View [SETUP.md](documentation/SETUP.md) documentation for an in depth walk through of the cloud deployment.
 
-# Setup
-### 1. Clone Repository
-- `$ git clone https://github.com/bcrant/diligence-doer.git`
+This project was built for the Atlassian Codegeist Hackathon 2021. If you would like to learn more about building apps with Atlassian Forge, here are some notes I took that will help you get started!
 
-### 2. Python
-Install the Python version manager `pyenv`
-- `$ brew install pyenv`
-- `$ brew install pyenv-virtualenv`
-  
-Download the Python version used in this project.
-- `$ pyenv install 3.8.10`
-- `$ pyvenv local 3.8.10`
-
-Create a virtual environment for this project using that Python version.
-- `$ pyenv virtualenv 3.8.10 diligence-doer`
-- `$ pip install --upgrade pip`
-- `$ pip install -r requirements-cli.txt`
-
-Install the build dependencies to your virtual environment (mainly AWS CLI)
-- `$ cd backend && pip install -r ./requirements.txt`
-
-### 3. NodeJS
-Install the NodeJS version manager `nvm` from source...
-- `$ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash`
-
-Restart your shell so the path changes take effect...
-- `$ exec $SHELL`
-
-### 4. AWS CLI
-You will then need to install and 
-[configure the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) 
-with your credentials
-- `$ aws configure`
-
-### 5. AWS CDK 
-- Make account or log in
-- Look at [.env.example](backend/.env.example) to get a preview of the credentials 
-  you will be producing
-- The [cdk.json](backend/cdk.json) file tells the CDK Toolkit how to execute your app.
-- Useful commands:
-  * `$ npm run build`   compile typescript to js
-  * `$ npm run watch`   watch for changes and compile
-  * `$ npm run test`    perform the jest unit tests
-  * `$ cdk deploy`      deploy this stack to your default AWS account/region
-  * `$ cdk diff`        compare deployed stack with current state
-  * `$ cdk synth`       emits the synthesized CloudFormation template
-
-### 6. Atlassian Forge
+### Atlassian Forge
 - Make account or log in
 - Visit Atlassian Website
   - [Getting Started with Forge](https://developer.atlassian.com/platform/forge/getting-started/)
@@ -106,9 +70,7 @@ with your credentials
     - `$ forge install`
     - `$ forge tunnel`
 
-    
-# Cloud Deployment
-View [SETUP.md](documentation/SETUP.md) documentation for an in depth walk through of the cloud deployment, hosted on all free tier AWS products.
+
 
 
 # Use Case Specific Caveats
