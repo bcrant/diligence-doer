@@ -13,7 +13,7 @@ modules:
     - key: diligence-doer-jira-issues-panel
       function: main
       title: Due Diligence
-      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      icon: https://raw.githubusercontent.com/bcrant/diligence-doer/main/documentation/images/icon.png
   function:
     - key: main
       handler: index.run
