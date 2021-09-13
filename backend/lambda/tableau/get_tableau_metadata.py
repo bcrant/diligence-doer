@@ -1,12 +1,19 @@
-from utils.authentication import authenticate_tableau
+from utils.authentication import authenticate_dynamodb, authenticate_tableau
 from utils.dynamodb import write_to_dynamodb
 from utils.helpers import *
 from utils.queries import TableauMetadataQueries
 
 
 def get_metadata():
+    #
+    # Query Tableau Metadata API
+    #
+
     # Tableau Authentication
     AUTHENTICATION, SERVER = authenticate_tableau()
+
+    # Dynamodb Instantiation
+    dynamodb_instance = authenticate_dynamodb()
 
     # Log in to Tableau Server and query the Metadata API
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
@@ -19,11 +26,12 @@ def get_metadata():
             .get('databaseTables')
 
         cleaned_tables = clean_tables_to_dashboards(tables_to_dashboards)
-        mapped_tables = map_tables_to_dashboards(cleaned_tables)
+        mapped_tables = map_tables_to_dashboards(cleaned_tables, SERVER.server_address)
 
         for table_dict in mapped_tables:
             # pp(table_dict)
             write_to_dynamodb(
+                dynamodb_instance,
                 record=table_dict,
                 pk='pk',
                 sk='tableau'
@@ -64,7 +72,7 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
     return cleaned_dicts_list
 
 
-def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
+def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_url):
     list_of_map_dicts = list()
     for clean_table in cleaned_tables_to_dashboard_list:
 
@@ -84,13 +92,13 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
                 if dashboards is not None:
                     if dash.get('name') not in list(dashboards.keys()):
                         dashboards[dash.get('name')] = str(
-                            'https://tableau_server_url.com/#/views/' + dash.get('path')
+                            tableau_server_url + '/#/views/' + dash.get('path')
                         )
                 else:
                     dashboards = dict()
                     if dash.get('name') not in list(dashboards.keys()):
                         dashboards[dash.get('name')] = str(
-                            'https://tableau_server_url.com/#/views/' + dash.get('path')
+                            tableau_server_url + '/#/views/' + dash.get('path')
                         )
 
             list_of_map_dicts.append(map_dict)

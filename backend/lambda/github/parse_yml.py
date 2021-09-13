@@ -141,8 +141,9 @@ def verify_sql_steps_in_yml(repo_yml_file):
     inner_match = b'- step_type: sql-command\n'
 
     if top_match and inner_match in repo_yml_file.getvalue():
-        split_yml = top_match + repo_yml_file.getvalue().split(top_match)[1]
-        return split_yml
+        if len(repo_yml_file.getvalue().split(top_match)) >= 1:
+            split_yml = top_match + repo_yml_file.getvalue().split(top_match)[1]
+            return split_yml
     else:
         return False
 
@@ -252,19 +253,19 @@ def parse_tables_and_fields_from_sql(commands_dict):
                     }
 
                 except ValueError as v_err:
-                    print(f'[SQL PARSE] ValueError: {v_err}')
+                    # print('{:64s} {}'.format('[SQL PARSE] ValueError: ', v_err))
                     continue
 
                 except KeyError as k_err:
-                    print(f'[SQL PARSE] KeyError: {k_err}')
+                    print('{:64s} {}'.format('[SQL PARSE] KeyError: ', k_err))
                     continue
 
                 except AttributeError as a_err:
-                    print(f'[SQL PARSE] AttributeError: {a_err}')
+                    print('{:64s} {}'.format('[SQL PARSE] AttributeError: ', a_err))
                     continue
 
                 except sqlparse.exceptions as sql_err:
-                    print(f'[SQL PARSE] SQL PARSE Exception: {sql_err}')
+                    print('{:64s} {}'.format('[SQL PARSE] SQL PARSE Exception: ', sql_err))
                     continue
 
     return table_metadata_dict
