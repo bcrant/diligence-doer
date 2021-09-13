@@ -98,7 +98,7 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_ur
             map_dict = {
                 'pk': table_full_name,
                 'tableau': {
-                    'columns': clean_table.get('columns'),
+                    # 'columns': clean_table.get('columns'),
                     'dashboards': dict()
                 }
             }

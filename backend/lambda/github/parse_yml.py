@@ -1,8 +1,6 @@
 import io
-import sqlparse
 import yaml
-from sqlparse import exceptions
-from sql_metadata import Parser
+from parse_sql import parse_sql_from_command, parse_tables_and_fields_from_sql
 from utils.helpers import *
 
 
@@ -71,7 +69,6 @@ def read_bytestream_to_yml(yml_files_list, replace_dict=None):
                 #
                 # Output
                 #
-
                 parsed_files_dict[yml_file.path] = parsed_output
 
             else:
@@ -194,81 +191,6 @@ def replace_yml_env_vars(yml_file, schema_names_dict):
                 cleaned_bytes.write(replaced_line.encode(encoding='UTF-8'))
 
     return cleaned_bytes.getvalue()
-
-
-def parse_sql_from_command(command):
-    # Format SQL
-    formatted_statement = sqlparse.format(
-        command,
-        reindent=True,
-        strip_comments=True,
-        keyword_case='upper',
-        comma_first=True
-    )
-
-    # Split SQL by statement (a phrase ending in a semicolon)
-    split_statement = sqlparse.split(formatted_statement)
-
-    return split_statement
-
-
-def parse_tables_and_fields_from_sql(commands_dict):
-    # Parse each table's SQL/DDL/DML for table and column information
-    table_metadata_dict = {}
-    for table in sorted(commands_dict.keys()):
-        print('{:64s} {}'.format('Identifying source tables and field names for...', table.upper()))
-
-        for q in commands_dict.get(table):
-            if str(sqlparse.parse(q)[0].token_first()) == 'INSERT':
-                try:
-                    #
-                    # Table Names
-                    #
-                    table_names = [t for t in Parser(q).tables]
-                    # log('table_names', table_names)
-
-                    #
-                    # Field Names
-                    #
-                    fields = [c for c in Parser(q).columns]
-                    # log('columns', columns)
-
-                    #
-                    # Table and Field Aliases (excluding for now)
-                    #
-                    # table_aliases_dict = Parser(q).tables_aliases
-                    # log('table_aliases_dict', table_aliases_dict)
-                    #
-                    # field_aliases_dict = Parser(q).columns_aliases
-                    # log('column_aliases_dict', column_aliases_dict)
-
-                    #
-                    # Store Output
-                    #
-                    table_metadata_dict[table] = {
-                        'source_tables': table_names,
-                        'field_names': fields
-                        # 'source_table_aliases': table_aliases_dict,
-                        # 'field_name_aliases': field_aliases_dict
-                    }
-
-                except ValueError as v_err:
-                    # print('{:64s} {}'.format('[SQL PARSE] ValueError: ', v_err))
-                    continue
-
-                except KeyError as k_err:
-                    print('{:64s} {}'.format('[SQL PARSE] KeyError: ', k_err))
-                    continue
-
-                except AttributeError as a_err:
-                    print('{:64s} {}'.format('[SQL PARSE] AttributeError: ', a_err))
-                    continue
-
-                except sqlparse.exceptions as sql_err:
-                    print('{:64s} {}'.format('[SQL PARSE] SQL PARSE Exception: ', sql_err))
-                    continue
-
-    return table_metadata_dict
 
 
 def map_file_to_url(input_dict, file_to_url):
