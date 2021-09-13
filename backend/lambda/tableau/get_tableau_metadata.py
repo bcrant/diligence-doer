@@ -80,6 +80,9 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
 def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_url):
     list_of_map_dicts = list()
 
+    #
+    # DELETE THIS LIST FOR PRODUCTION USE... ONLY FOR DEMO.
+    #
     demo_urls = [
         'https://public.tableau.com/app/profile/spotify.insights/viz/OnTour2018/OnTour',
         'https://public.tableau.com/app/profile/spotify.insights/viz/SpotifyPridePlaylisting/ToUSAWithPride',
