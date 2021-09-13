@@ -1,12 +1,12 @@
-import boto3
-from utils.helpers import pp
+from helpers import pp
 
 
-def write_to_dynamodb(record, pk, sk):
+def write_to_dynamodb(dynamo_auth, record, pk, sk):
     """
     Write to DynamoDB
 
     Args:
+        dynamo_auth (obj): Boto3 Dynamodb object
         record (dict): A Python Dictionary containing at minimum 'pk' key and value and no keys with Null values.
         pk (str): The field name of the Primary Key value in record
         sk (str): "github" or "tableau"
@@ -27,8 +27,7 @@ def write_to_dynamodb(record, pk, sk):
 
     """
 
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table(name='diligence-doer')
+    table = dynamo_auth.Table(name='diligence-doer')
 
     if sk not in ('tableau', 'github'):
         print(f'[ INPUT ERROR ] "sk" parameter invalid. Expecting "tableau" or "github"')

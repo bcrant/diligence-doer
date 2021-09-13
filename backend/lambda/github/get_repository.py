@@ -1,6 +1,6 @@
 from github import Github
 from parse_yml import parse_yml
-from utils.authentication import authenticate_github
+from utils.authentication import authenticate_github, authenticate_dynamodb
 from utils.dynamodb import write_to_dynamodb
 from utils.helpers import *
 
@@ -10,8 +10,11 @@ def get_repo():
     # Query Github REST API
     #
 
-    # Authentication
+    # Github Authentication
     endpoint, token, repo_path = authenticate_github()
+
+    # Dynamodb Instantiation
+    dynamodb_instance = authenticate_dynamodb()
 
     # Adjust endpoint based on whether a personal or Enterprise Github Account is in use
     if not endpoint:
@@ -36,6 +39,7 @@ def get_repo():
         }
 
         write_to_dynamodb(
+            dynamodb_instance,
             record=map_dict,
             pk='pk',
             sk='github'
@@ -46,7 +50,7 @@ def get_repo():
 
 def get_files_recursively(repo):
     print(f'Inspecting all files in Github repository: {repo.full_name}...')
-    repo_contents = repo.get_contents('')[8:9]
+    repo_contents = repo.get_contents('')
 
     repo_files_list = list()
 

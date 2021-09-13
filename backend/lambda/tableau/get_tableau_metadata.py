@@ -1,12 +1,24 @@
-from utils.authentication import authenticate_tableau
+import random
+from utils.authentication import authenticate_dynamodb, authenticate_tableau
 from utils.dynamodb import write_to_dynamodb
 from utils.helpers import *
 from utils.queries import TableauMetadataQueries
+#
+# Delete random from import for production.
+# See map_tables_to_dashboards function for details
+#
 
 
 def get_metadata():
+    #
+    # Query Tableau Metadata API
+    #
+
     # Tableau Authentication
     AUTHENTICATION, SERVER = authenticate_tableau()
+
+    # Dynamodb Instantiation
+    dynamodb_instance = authenticate_dynamodb()
 
     # Log in to Tableau Server and query the Metadata API
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
@@ -19,11 +31,12 @@ def get_metadata():
             .get('databaseTables')
 
         cleaned_tables = clean_tables_to_dashboards(tables_to_dashboards)
-        mapped_tables = map_tables_to_dashboards(cleaned_tables)
+        mapped_tables = map_tables_to_dashboards(cleaned_tables, SERVER.server_address)
 
         for table_dict in mapped_tables:
             # pp(table_dict)
             write_to_dynamodb(
+                dynamodb_instance,
                 record=table_dict,
                 pk='pk',
                 sk='tableau'
@@ -64,8 +77,19 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
     return cleaned_dicts_list
 
 
-def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
+def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_url):
     list_of_map_dicts = list()
+
+    #
+    # DELETE THIS LIST FOR PRODUCTION USE... ONLY FOR DEMO.
+    #
+    demo_urls = [
+        'https://public.tableau.com/app/profile/spotify.insights/viz/OnTour2018/OnTour',
+        'https://public.tableau.com/app/profile/spotify.insights/viz/SpotifyPridePlaylisting/ToUSAWithPride',
+        'https://public.tableau.com/app/profile/spotify.insights/viz/2017ChristmasStreamingTrends/ChristmasStreaming',
+        'https://public.tableau.com/app/profile/spotify.insights/viz/TotalEclipse/TotalEclipseoftheHeart'
+    ]
+
     for clean_table in cleaned_tables_to_dashboard_list:
 
         if len(clean_table.get('downstreamDashboards')) >= 1:
@@ -83,17 +107,19 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list):
             for dash in clean_table.get('downstreamDashboards'):
                 if dashboards is not None:
                     if dash.get('name') not in list(dashboards.keys()):
-                        dashboards[dash.get('name')] = str(
-                            'https://tableau_server_url.com/#/views/' + dash.get('path')
-                        )
-                else:
-                    dashboards = dict()
-                    if dash.get('name') not in list(dashboards.keys()):
-                        dashboards[dash.get('name')] = str(
-                            'https://tableau_server_url.com/#/views/' + dash.get('path')
-                        )
+                        #
+                        # DELETE THIS FOR PRODUCTION USE... ONLY FOR DEMO.
+                        # Use commented code below instead
+                        #
+                        # dashboards[dash.get('name')] = str(
+                        #     tableau_server_url + '/#/views/' + dash.get('path')
+                        # )
+                        dashboards[dash.get('name')] = demo_urls[random.randrange(1, 4)]
 
-            list_of_map_dicts.append(map_dict)
+                    else:
+                        dashboards = dict()
+
+                    list_of_map_dicts.append(map_dict)
 
     return list_of_map_dicts
 
@@ -110,37 +136,6 @@ def clean_published_datasources(published_datasources):
             })
 
     return cleaned_datasources_list
-
-
-def unused_queries():
-    print()
-    # published_datasources = SERVER.metadata\
-    #     .query(TableauMetadataQueries.PUBLISHED_DATASOURCES)\
-    #     .get('data')\
-    #     .get('publishedDatasources')
-    # pp(published_datasources)
-
-    # cleaned_datasources = clean_published_datasources(published_datasources)
-    # pp(cleaned_datasources)
-
-    # embedded_datasources = SERVER.metadata.query(TableauMetadataQueries.EMBEDDED_DATASOURCES)
-    # pp(embedded_datasources['data'])
-
-    # workbooks = SERVER.metadata.query(TableauMetadataQueries.WORKBOOKS)
-    # pp(workbooks['data'])
-
-    # databases = SERVER.metadata.query(TableauMetadataQueries.DATABASES)
-    # pp(databases['data'])
-
-    # database_tables = SERVER.metadata.query(TableauMetadataQueries.DATABASE_TABLES)
-    # pp(database_tables['data'])
-
-    # # workbook_fields = TSC.Pager(SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS))
-    # workbook_fields = SERVER.metadata.query(TableauMetadataQueries.WORKBOOK_FIELDS)
-    # pp(workbook_fields)
-
-    # custom_sql = SERVER.metadata.query(TableauMetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)
-    # pp(custom_sql['data'])
 
 
 if __name__ == "__main__":

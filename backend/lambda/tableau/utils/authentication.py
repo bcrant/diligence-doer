@@ -1,28 +1,25 @@
 import os
+import boto3
 import tableauserverclient as TSC
 from dotenv import load_dotenv
 load_dotenv()
 
 
-def authenticate_tableau():
-    #
-    # Tableau Authentication
-    #
-    TOKEN_NAME = os.getenv('TABLEAU_PAT_NAME')
-    TOKEN = os.getenv('TABLEAU_PAT')
-    SERVER_URL = os.getenv('TABLEAU_SERVER_URL')
+def authenticate_dynamodb():
+    if os.getenv('AWS_EXECUTION_ENV') is None:
+        #
+        # FOR LOCAL
+        #
+        session = boto3.Session(profile_name=os.getenv('AWS_PROFILE'), region_name=os.getenv('AWS_REGION_NAME'))
+        dynamodb = session.resource('dynamodb')
 
-    auth = TSC.PersonalAccessTokenAuth(
-        token_name=TOKEN_NAME,
-        personal_access_token=TOKEN
-    )
+    else:
+        #
+        # FOR REMOTE
+        #
+        dynamodb = boto3.resource('dynamodb')
 
-    server = TSC.Server(
-        server_address=SERVER_URL,
-        use_server_version=True
-    )
-
-    return auth, server
+    return dynamodb
 
 
 def authenticate_github():
@@ -73,3 +70,24 @@ def authenticate_github_graphql():
     }
 
     return url, headers, repo_info
+
+
+def authenticate_tableau():
+    #
+    # Tableau Authentication
+    #
+    TOKEN_NAME = os.getenv('TABLEAU_PAT_NAME')
+    TOKEN = os.getenv('TABLEAU_PAT')
+    SERVER_URL = os.getenv('TABLEAU_SERVER_URL')
+
+    auth = TSC.PersonalAccessTokenAuth(
+        token_name=TOKEN_NAME,
+        personal_access_token=TOKEN
+    )
+
+    server = TSC.Server(
+        server_address=SERVER_URL,
+        use_server_version=True
+    )
+
+    return auth, server
