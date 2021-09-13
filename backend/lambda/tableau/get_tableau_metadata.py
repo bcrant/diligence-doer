@@ -113,19 +113,10 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_ur
                         # )
                         dashboards[dash.get('name')] = demo_urls[random.randrange(1, 4)]
 
-                else:
-                    dashboards = dict()
-                    if dash.get('name') not in list(dashboards.keys()):
-                        #
-                        # DELETE THIS FOR PRODUCTION USE... ONLY FOR DEMO.
-                        # Use commented code below instead
-                        #
-                        # dashboards[dash.get('name')] = str(
-                        #     tableau_server_url + '/#/views/' + dash.get('path')
-                        # )
-                        dashboards[dash.get('name')] = demo_urls[random.randrange(1, 4)]
+                    else:
+                        dashboards = dict()
 
-            list_of_map_dicts.append(map_dict)
+                    list_of_map_dicts.append(map_dict)
 
     return list_of_map_dicts
 
