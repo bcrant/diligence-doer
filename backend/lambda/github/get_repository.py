@@ -46,7 +46,7 @@ def get_repo():
 
 def get_files_recursively(repo):
     print(f'Inspecting all files in Github repository: {repo.full_name}...')
-    repo_contents = repo.get_contents('')[8:9]
+    repo_contents = repo.get_contents('')
 
     repo_files_list = list()
 
