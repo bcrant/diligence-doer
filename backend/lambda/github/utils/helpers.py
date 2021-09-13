@@ -34,6 +34,19 @@ def denormalize_json(nested_dict):
     return {**nested_dicts, **flat_dict}
 
 
+def map_file_to_url(input_dict, file_to_url):
+
+    # Invert dict key values and enrich file info
+    out_dict = defaultdict(dict)
+    for file, tables in input_dict.items():
+        for table in tables:
+            out_dict[table].update({
+                file: file_to_url.get(file)
+            })
+
+    return out_dict
+
+
 def convert_tableau_file_to_xml(file_path):
     """
     Converts a given Tableau file to XML
