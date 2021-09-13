@@ -1,7 +1,9 @@
 # Diligence Doer
-Built for data teams that Do their Diligence.
 
-[comment]: <> (> I am a little teapot. [Watch demo video on YouTube.]&#40;https://www.youtube.com/watch?v=4to2ln6pME8&#41;)
+[Codegeist Hackathon 2021](https://codegeist.devpost.com/)
+
+> See the Diligence Doer in action! [Watch demo video on YouTube](https://www.youtube.com/watch?v=-XMga6XK3lE)
+
 
 ![img](https://img.shields.io/badge/Powered%20by-Atlassian%20Forge-blue.svg) ![img](https://img.shields.io/badge/style-API-4A154B?label=Jira&logo=Jira) ![img](https://img.shields.io/badge/style-API-333333?label=Github&logo=Github) ![img](https://img.shields.io/badge/style-API-E97627?label=Tableau&logo=Tableau)  
 
