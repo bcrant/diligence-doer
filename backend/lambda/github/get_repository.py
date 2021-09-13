@@ -35,47 +35,43 @@ def get_repo():
     # Parse SQL from SQL Files
     #
     sql_map_file_path_to_url = dict((sql_file.name, sql_file.html_url) for sql_file in sql_files)
-    sql_mapped_tables_to_files = parse_sql(sql_files[0:10], sql_map_file_path_to_url, env_file)
-    pp(sql_mapped_tables_to_files)
-
-    # for table_name, file_dict in sql_mapped_tables_to_files.items():
-    #     sql_map_dict = {
-    #         'pk': table_name,
-    #         'github': {
-    #             'files': {**file_dict}
-    #         }
-    #     }
-    #     pp(sql_map_dict)
-
-        # write_to_dynamodb(
-        #     dynamodb_instance,
-        #     record=sql_map_dict,
-        #     pk='pk',
-        #     sk='github'
-        # )
+    sql_mapped_tables_to_files = parse_sql(sql_files, sql_map_file_path_to_url, env_file)
+    # pp(sql_mapped_tables_to_files)
 
     #
     # Parse SQL from YML Files
     #
     yml_map_file_path_to_url = dict((yml_file.path, yml_file.html_url) for yml_file in yml_files)
     yml_mapped_tables_to_files = parse_yml(yml_files, yml_map_file_path_to_url)
+    # pp(yml_mapped_tables_to_files)
 
-    pp(yml_mapped_tables_to_files)
+    #
+    # Join SQL and YML results, Write to DynamoDB
+    #
+    all_tables_list = list(set(
+        list(sql_mapped_tables_to_files.keys()) + list(yml_mapped_tables_to_files.keys())
+    ))
 
-    # for table_name, file_dict in yml_mapped_tables_to_files.items():
-    #     yml_map_dict = {
-    #         'pk': table_name,
-    #         'github': {
-    #             'files': {**file_dict}
-    #         }
-    #     }
+    for table in all_tables_list:
+        sql_file_dict = sql_mapped_tables_to_files.get(table, dict())
+        yml_file_dict = yml_mapped_tables_to_files.get(table, dict())
 
-        # write_to_dynamodb(
-        #     dynamodb_instance,
-        #     record=yml_map_dict,
-        #     pk='pk',
-        #     sk='github'
-        # )
+        output_dict = {
+            'pk': table,
+            'github': {
+                'files': {
+                    **sql_file_dict,
+                    **yml_file_dict
+                }
+            }
+        }
+
+        write_to_dynamodb(
+            dynamodb_instance,
+            record=output_dict,
+            pk='pk',
+            sk='github'
+        )
 
     return
 

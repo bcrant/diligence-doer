@@ -20,7 +20,6 @@ def parse_sql(sql_files_list, file_to_url_dict, env_replace_dict):
         sql_bytestream = io.BytesIO(sql_file.decoded_content)
 
         cleaned_sql_file = replace_sql_env_vars(sql_bytestream.getvalue(), env_replace_dict)
-        # print(cleaned_sql_file)
 
         split_sql_statements_list = parse_sql_from_command(cleaned_sql_file)
 
@@ -35,9 +34,9 @@ def parse_sql(sql_files_list, file_to_url_dict, env_replace_dict):
         file_to_url_dict
     )
 
-    pp(table_to_file_dict)
+    # pp(table_to_file_dict)
 
-    return
+    return table_to_file_dict
 
 
 def parse_sql_from_command(command):
@@ -60,7 +59,7 @@ def parse_tables_and_fields_from_sql(commands_dict):
     # Parse each table's SQL/DDL/DML for table and column information
     table_metadata_dict = {}
     for table in sorted(commands_dict.keys()):
-        print('{:64s} {}'.format('Identifying source tables and field names for...', table.upper()))
+        # print('{:64s} {}'.format('Identifying source tables and field names for...', table.upper()))
 
         for q in commands_dict.get(table):
             if str(sqlparse.parse(q)[0].token_first()) == 'INSERT':
