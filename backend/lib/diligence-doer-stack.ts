@@ -1,6 +1,6 @@
 import * as cdk from "@aws-cdk/core";
-import * as apigateway from "@aws-cdk/aws-apigateway";
 import * as dynamodb from "@aws-cdk/aws-dynamodb";
+import * as apigateway from "@aws-cdk/aws-apigateway";
 import * as events from "@aws-cdk/aws-events";
 import * as eventTargets from "@aws-cdk/aws-events-targets";
 import * as lambda from "@aws-cdk/aws-lambda";

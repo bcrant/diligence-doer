@@ -1,6 +1,6 @@
 import random
 from utils.authentication import authenticate_dynamodb, authenticate_tableau
-from utils.dynamodb import write_to_dynamodb
+# from utils.dynamodb import write_to_dynamodb
 from utils.helpers import *
 from utils.queries import TableauMetadataQueries
 #
@@ -17,8 +17,8 @@ def get_metadata():
     # Tableau Authentication
     AUTHENTICATION, SERVER = authenticate_tableau()
 
-    # Dynamodb Instantiation
-    dynamodb_instance = authenticate_dynamodb()
+    # # Dynamodb Instantiation
+    # dynamodb_instance = authenticate_dynamodb()
 
     # Log in to Tableau Server and query the Metadata API
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
@@ -34,20 +34,31 @@ def get_metadata():
         mapped_tables = map_tables_to_dashboards(cleaned_tables, SERVER.server_address)
 
         for table_dict in mapped_tables:
-            # pp(table_dict)
-            write_to_dynamodb(
-                dynamodb_instance,
-                record=table_dict,
-                pk='pk',
-                sk='tableau'
-            )
+            pp(table_dict)
+            #
+            # Output to text file or table here
+            #
+            # write_to_dynamodb(
+            #     dynamodb_instance,
+            #     record=table_dict,
+            #     pk='pk',
+            #     sk='tableau'
+            # )
+
+        # #
+        # # WORKBOOK FIELDS
+        # #
+        # workbook_fields = SERVER.metadata\
+        #     .query(TableauMetadataQueries.WORKBOOK_FIELDS)\
+        #     .get('data')
+        # pp(workbook_fields)
+        #
 
 
 def clean_tables_to_dashboards(tables_to_dashboards_dict):
     # Clean keys and values to make matching easier
     cleaned_dicts_list = list()
     for table_dict in tables_to_dashboards_dict:
-
         # Filter out text files
         text_filters = ('hyper', 'webdata-direct', 'textscan', 'excel-direct', 'google-sheets')
         if table_dict.get('connectionType') not in text_filters:
@@ -71,6 +82,8 @@ def clean_tables_to_dashboards(tables_to_dashboards_dict):
                     col_dict.get('name').lower()
                     for col_dict in table_dict.get('columns')
                 ]
+            else:
+                table_dict['columns'] = []
 
             cleaned_dicts_list.append(table_dict)
 
@@ -83,12 +96,12 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_ur
     #
     # DELETE THIS LIST FOR PRODUCTION USE... ONLY FOR DEMO.
     #
-    demo_urls = [
-        'https://public.tableau.com/app/profile/spotify.insights/viz/OnTour2018/OnTour',
-        'https://public.tableau.com/app/profile/spotify.insights/viz/SpotifyPridePlaylisting/ToUSAWithPride',
-        'https://public.tableau.com/app/profile/spotify.insights/viz/2017ChristmasStreamingTrends/ChristmasStreaming',
-        'https://public.tableau.com/app/profile/spotify.insights/viz/TotalEclipse/TotalEclipseoftheHeart'
-    ]
+    # demo_urls = [
+    #     'https://public.tableau.com/app/profile/spotify.insights/viz/OnTour2018/OnTour',
+    #     'https://public.tableau.com/app/profile/spotify.insights/viz/SpotifyPridePlaylisting/ToUSAWithPride',
+    #     'https://public.tableau.com/app/profile/spotify.insights/viz/2017ChristmasStreamingTrends/ChristmasStreaming',
+    #     'https://public.tableau.com/app/profile/spotify.insights/viz/TotalEclipse/TotalEclipseoftheHeart'
+    # ]
 
     for clean_table in cleaned_tables_to_dashboard_list:
 
@@ -98,7 +111,7 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_ur
             map_dict = {
                 'pk': table_full_name,
                 'tableau': {
-                    # 'columns': clean_table.get('columns'),
+                    'columns': clean_table.get('columns'),
                     'dashboards': dict()
                 }
             }
@@ -111,10 +124,10 @@ def map_tables_to_dashboards(cleaned_tables_to_dashboard_list, tableau_server_ur
                         # DELETE THIS FOR PRODUCTION USE... ONLY FOR DEMO.
                         # Use commented code below instead
                         #
-                        # dashboards[dash.get('name')] = str(
-                        #     tableau_server_url + '/#/views/' + dash.get('path')
-                        # )
-                        dashboards[dash.get('name')] = demo_urls[random.randrange(1, 4)]
+                        dashboards[dash.get('name')] = str(
+                            tableau_server_url + '/#/views/' + dash.get('path')
+                        )
+                        # dashboards[dash.get('name')] = demo_urls[random.randrange(1, 4)]
 
                     else:
                         dashboards = dict()
