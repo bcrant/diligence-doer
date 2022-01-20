@@ -4,6 +4,8 @@
 node_modules
 *.env*
 !.env.example
+*.csv
+*.json
 
 # CDK asset staging directory
 .cdk.staging

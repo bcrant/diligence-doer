@@ -5,6 +5,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+class Environment:
+    DEV = 'dev'
+    PROD = 'prod'
+
+
 def authenticate_dynamodb():
     if os.getenv('AWS_EXECUTION_ENV') is None:
         #
@@ -72,13 +77,24 @@ def authenticate_github_graphql():
     return url, headers, repo_info
 
 
-def authenticate_tableau():
+def authenticate_tableau(env):
     #
     # Tableau Authentication
     #
+    if env not in (Environment.DEV, Environment.PROD):
+        print('Wrong environment supplied to authenticate_tableau function. Expected "dev" or "prod"')
+
     TOKEN_NAME = os.getenv('TABLEAU_PAT_NAME')
-    TOKEN = os.getenv('TABLEAU_PAT')
-    SERVER_URL = os.getenv('TABLEAU_SERVER_URL')
+    TOKEN = None
+    SERVER_URL = None
+
+    if env == 'dev':
+        TOKEN = os.getenv('TABLEAU_DEV_PAT')
+        SERVER_URL = os.getenv('TABLEAU_DEV_SERVER_URL')
+
+    if env == 'prod':
+        TOKEN = os.getenv('TABLEAU_PROD_PAT')
+        SERVER_URL = os.getenv('TABLEAU_PROD_SERVER_URL')
 
     auth = TSC.PersonalAccessTokenAuth(
         token_name=TOKEN_NAME,

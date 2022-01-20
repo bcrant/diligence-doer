@@ -1,14 +1,15 @@
+import pandas as pd
 import sqlparse
 import xml.etree.ElementTree as ET
 from sqlparse.tokens import Keyword
 from sql_metadata import Parser
-from utils.authentication import authenticate_tableau
+from utils.authentication import authenticate_tableau, Environment
 from utils.helpers import *
 
 
 def parse_tableau():
     # Tableau Authentication
-    AUTHENTICATION, SERVER = authenticate_tableau()
+    AUTHENTICATION, SERVER = authenticate_tableau(Environment.PROD)
 
     # Initialize dictionaries to store outputs
     metadata_dict = dict()
@@ -71,10 +72,12 @@ def parse_tableau():
             # These are the table and field names as defined in Initial SQL
             initial_sql = get_initial_sql(connections)
             parsed_initial_sql = parse_initial_sql(initial_sql)
+            str_fmt_initial_sql = str_fmt_sql(initial_sql)
 
             # These are the table and field names as defined in Custom SQL.
             custom_sql = get_custom_sql(relations)
             parsed_custom_sql = parse_custom_sql(custom_sql)
+            str_fmt_custom_sql = str_fmt_sql(custom_sql)
 
             # Combine parsed XML (Tableau Data Model), Initial SQL, and Custom SQL tables and columns
             all_tables = list(set(
@@ -95,15 +98,41 @@ def parse_tableau():
                 'datasource_name': ds_name,
                 'source_table_names_list': all_tables,
                 'source_field_names_list': all_columns,
-                'initial_sql': initial_sql,
-                'custom_sql': custom_sql,
+                'initial_sql': str_fmt_initial_sql,
+                'custom_sql': str_fmt_custom_sql,
             }
 
     print('PARSED DATA SOURCE DICT...')
-    pp(parsed_data_source_dict)
-    with open('./tableau_datasource_metadata.json', 'w') as f:
-        json.dump(parsed_data_source_dict, f)
 
+    #
+    # OUTPUT: CSV
+    #
+    data = list()
+    for _, ds in parsed_data_source_dict.items():
+        data.append(list(ds.values()))
+
+    columns = [
+        'datasource_id',
+        'datasource_name',
+        'source_table_names_list',
+        'source_field_names_list',
+        'initial_sql',
+        'custom_sql',
+    ]
+
+    df = pd.DataFrame(data, columns=columns)
+    df.to_csv('./tableau_datasource_metadata.csv', encoding='utf-8', index=False)
+    print(df)
+
+    #
+    # OUTPUT: JSON
+    #
+    # with open('./tableau_datasource_metadata.json', 'w') as f:
+    #     json.dump(parsed_data_source_dict, f)
+
+    #
+    # OUTPUT: DynamoDB
+    #
     # write_to_dynamodb(record=parsed_data_source_dict, pk='pk')
 
     # Remove all data source xml files from temporary directory
@@ -394,6 +423,17 @@ def validate_parenthesis(query_string):
         return validate_parenthesis(equal_parenthesis)
     else:
         return query_string
+
+
+def str_fmt_sql(sql):
+    new_line = '''
+    '''
+    sql_str_list = [
+        q.replace('\n', new_line)
+        for q in sql
+    ]
+
+    return sql_str_list
 
 
 if __name__ == "__main__":

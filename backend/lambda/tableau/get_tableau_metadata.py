@@ -1,10 +1,7 @@
 import pandas as pd
-from utils.authentication import authenticate_tableau
+from utils.authentication import authenticate_tableau, Environment
 from utils.helpers import *
 from utils.queries import TableauMetadataQueries
-pd.set_option('display.max_rows', 500)
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 4000)
 
 
 def get_metadata():
@@ -13,7 +10,7 @@ def get_metadata():
     #
 
     # Tableau Authentication
-    AUTHENTICATION, SERVER = authenticate_tableau()
+    AUTHENTICATION, SERVER = authenticate_tableau(Environment.PROD)
 
     # Log in to Tableau Server and query the Metadata API
     with SERVER.auth.sign_in_with_personal_access_token(AUTHENTICATION):
@@ -27,35 +24,26 @@ def get_metadata():
 
         cleaned_tables = clean_tables_to_dashboards(tables_to_dashboards)
         mapped_tables = map_tables_to_dashboards(cleaned_tables, SERVER.server_address)
-        # data = list()
-        # for table_dict in mapped_tables:
-        #     # pp(table_dict)
-        #     db_table = table_dict.get('pk')
-        #     columns = table_dict.get('tableau').get('columns')
-        #     dashboards = table_dict.get('tableau').get('dashboards')
-        #     data.append([db_table, columns, dashboards])
-        #
-        # df = pd.DataFrame(data, columns=['db_table', 'columns', 'dashboards'])
-        # df.to_csv('./tableau_dashboard_datasource_list.csv', encoding='utf-8', index=False)
-        # print(df)
-        #
 
-        # #
-        # # WORKBOOK FIELDS
-        # #
-        # workbook_fields = SERVER.metadata\
-        #     .query(TableauMetadataQueries.WORKBOOK_FIELDS)\
-        #     .get('data')
-        # pp(workbook_fields)
         #
+        # OUTPUT: CSV
+        #
+        data = list()
+        for table_dict in mapped_tables:
+            db_table = table_dict.get('pk')
+            columns = table_dict.get('tableau').get('columns')
+            dashboards = table_dict.get('tableau').get('dashboards')
+            for db in dashboards.items():
+                dashboard_name = db[0]
+                dashboard_url = db[1]
+                data.append([db_table, str(columns), dashboard_name, dashboard_url])
 
-        # #
-        # # CUSTOM SQL
-        # #
-        # custom_sql = SERVER.metadata\
-        #     .query(TableauMetadataQueries.CUSTOM_SQL_TO_DASHBOARDS)\
-        #     # .get('data')
-        # pp(custom_sql)
+        df = pd\
+            .DataFrame(data, columns=['db_table', 'columns', 'dashboard_name', 'dashboard_url']) \
+            .drop_duplicates(keep='first') \
+            .reset_index(drop=True)
+        df.to_csv('./tableau_dashboard_datasource_list.csv', encoding='utf-8', index=False)
+        print(df)
 
 
 def clean_tables_to_dashboards(tables_to_dashboards_dict):
